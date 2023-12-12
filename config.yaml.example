@@ -1,0 +1,40 @@
+db:
+    type: "postgres"
+    host: "172.104.179.149"
+    port: "5432"
+    username: "postgres"
+    password: "Bandung2022"
+    schema: "wit-db"
+    conn:
+        max-idle: "20"
+        max-lifetime: "10m"
+        keep-alive-interval: "5m"
+        max-open: "100"
+restapi:
+    port: 6969
+    request-timeout: 10s
+    healthcheck-path: /health/info
+    info-path: /actuator/info
+    shutdown:
+        wait-duration: 1s
+        timeout-duration: 5s
+salt:
+    length: 5
+    charset: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+grpc:
+    port: 8089
+    request-timeout: 10s
+    shutdown-wait-duration: 1s
+    reflection-enabled: false
+jwt:
+    key: "token-key"
+    expired: 24h
+    refresh_expired: 8766h
+header:
+    token-param: "token"
+    refresh-token-param: "refresh-token"
+password:
+    default: "wit.id"
+common:
+    config-routes-key: "config_routes"
+    prefix-config-route-backoffice: "/backoffice/"

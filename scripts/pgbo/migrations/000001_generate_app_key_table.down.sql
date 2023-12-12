@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS app_key;
+DROP SEQUENCE IF EXISTS app_key_id_seq;
