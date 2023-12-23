@@ -10,10 +10,11 @@ import (
 // with layout:
 //
 // grpc:
-//   port: 8088
-//   request-timeout: 10s
-//   shutdown-wait-duration: 3s
-//   reflection-enabled: true
+//
+//	port: 8088
+//	request-timeout: 10s
+//	shutdown-wait-duration: 3s
+//	reflection-enabled: true
 //
 // call using `grpckit.NewRuntimeConfig(v, "grpc")`.
 func NewRuntimeConfig(cfg config.KVStore, path string) *RuntimeConfig {

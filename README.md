@@ -32,14 +32,14 @@
 ## Local development
 
 * Copy file `config.example.yml` to `config.yml`
-* Setup database (local) to create database schema equal with config `(schema: "wit-db")`
-* Setup Makefile param for migration connection database ex: `PG_DB_URL=postgresql://postgres:postgres@localhost:5439/wit-db?sslmode=disable`
+* Setup database (local) to create database schema equal with config `(schema: "think_laundry-dev")`
+* Setup Makefile param for migration connection database ex: `PG_DB_URL=postgresql://postgres:postgres@127.0.0.1:5439/think_laundry-dev?sslmode=disable`
 * run mod=vendor dependency with `make deps`
 * Up / Run migrate with `make run pg.migrate.up` (Use WSL for OS Windows)
 * run with `make run-service-local`
 
 ## API Docs
-### [Postman API Docs](https://documenter.getpostman.com/view/19659454/Uz5FKGrK "Click")
+### [Postman API Docs]
 
 ## License
-[© 2022 WIT.ID](https://wit.id)
+[© 2023 thinkIT]

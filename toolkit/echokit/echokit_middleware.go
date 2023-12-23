@@ -149,8 +149,8 @@ func bodyDumpHandlerFunc(c echo.Context, reqBody []byte, respBody []byte) {
 
 // TimeoutConfig request timeout configuration
 // default value:
-//  * timeout: 7 seconds
-//	* middleware.DefaultSkipper / apply to all url
+//   - timeout: 7 seconds
+//   - middleware.DefaultSkipper / apply to all url
 type TimeoutConfig struct {
 	Timeout time.Duration      `json:"timeout,omitempty"`
 	Skipper middleware.Skipper `json:"-"`

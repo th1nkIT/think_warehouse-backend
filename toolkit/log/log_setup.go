@@ -195,18 +195,19 @@ func (l *Logger) Set() *Logger {
 // NewFromConfig returns logger based on config file
 //
 // log:
-//   level: info
-//   json-enabled: false
-//   file:
-//     enabled: true
-//     path: ./logs/promo-engine.log
-//     maxsize-mb: 10
-//     maxage-days: 7
-//     maxbackup-files: 2
-//   batch:
-//     enabled: false
-//     max-lines: 1000
-//     interval: 15ms
+//
+//	level: info
+//	json-enabled: false
+//	file:
+//	  enabled: true
+//	  path: ./logs/promo-engine.log
+//	  maxsize-mb: 10
+//	  maxage-days: 7
+//	  maxbackup-files: 2
+//	batch:
+//	  enabled: false
+//	  max-lines: 1000
+//	  interval: 15ms
 //
 // then we can call using :
 // v := viper.New()
