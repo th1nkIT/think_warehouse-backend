@@ -23,6 +23,8 @@ var (
 	ErrUnauthorizedUser      = errors.New("unauthorized user")
 	ErrInActiveUser          = errors.New("user not active")
 
+	ErrProductNotFound = errors.New("product not found")
+
 	ErrRoleNotFound = errors.New("role not found")
 
 	ErrInvalidESBPromotionCode     = errors.New("invalid ESB promotion code")

@@ -20,6 +20,8 @@ import (
 	userBackofficeRoleApp "github.com/wit-id/blueprint-backend-go/src/user_backoffice_role/application"
 
 	userHandheldApp "github.com/wit-id/blueprint-backend-go/src/user_handheld/application"
+
+	productHandledApp "github.com/wit-id/blueprint-backend-go/src/product/application"
 )
 
 func RunEchoHTTPService(ctx context.Context, s *httpservice.Service, cfg config.KVStore) {
@@ -48,6 +50,9 @@ func RunEchoHTTPService(ctx context.Context, s *httpservice.Service, cfg config.
 	userBackofficeApp.AddRouteUserBackoffice(s, cfg, e)
 
 	userHandheldApp.AddRouteUserHandheld(s, cfg, e)
+
+	// Product
+	productHandledApp.AddRouteProduct(s, cfg, e)
 
 	// set config routes for role access
 	httpservice.SetRouteConfig(ctx, s, cfg, e)
