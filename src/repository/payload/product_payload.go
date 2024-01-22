@@ -37,32 +37,37 @@ type ListProductFilterPayload struct {
 }
 
 type readRegisterProductPayload struct {
-	GUID              string    `json:"id"`
-	Name              string    `json:"name"`
-	ProductPictureUrl *string   `json:"profile_picture_image_url"`
-	Description       string    `json:"description"`
-	CreatedAt         time.Time `json:"created_at"`
-	CreatedBy         string    `json:"created_by"`
+	GUID              string                    `json:"id"`
+	Name              string                    `json:"name"`
+	ProductPictureUrl *string                   `json:"profile_picture_image_url"`
+	Description       string                    `json:"description"`
+	CreatedAt         time.Time                 `json:"created_at"`
+	CreatedBy         readUserBackOfficePayload `json:"created_by"`
+}
+
+type readUserBackOfficePayload struct {
+	GUID string `json:"id"`
+	Name string `json:"name"`
 }
 
 type readUpdateProductPayload struct {
-	GUID              string    `json:"id"`
-	Name              string    `json:"name"`
-	ProductPictureUrl *string   `json:"profile_picture_image_url"`
-	Description       string    `json:"description"`
-	CreatedAt         time.Time `json:"created_at"`
-	CreatedBy         string    `json:"created_by"`
+	GUID              string                    `json:"id"`
+	Name              string                    `json:"name"`
+	ProductPictureUrl *string                   `json:"profile_picture_image_url"`
+	Description       string                    `json:"description"`
+	UpdatedAt         time.Time                 `json:"updated_at"`
+	UpdatedBy         readUserBackOfficePayload `json:"updated_by"`
 }
 
 type readProductPayload struct {
-	GUID              string     `json:"id"`
-	Name              string     `json:"name"`
-	ProductPictureUrl *string    `json:"profile_picture_image_url"`
-	Description       string     `json:"description"`
-	CreatedAt         time.Time  `json:"created_at"`
-	CreatedBy         string     `json:"created_by"`
-	UpdatedAt         *time.Time `json:"updated_at"`
-	UpdatedBy         *string    `json:"updated_by"`
+	GUID              string                     `json:"id"`
+	Name              string                     `json:"name"`
+	ProductPictureUrl *string                    `json:"profile_picture_image_url"`
+	Description       string                     `json:"description"`
+	CreatedAt         time.Time                  `json:"created_at"`
+	CreatedBy         readUserBackOfficePayload  `json:"created_by"`
+	UpdatedAt         *time.Time                 `json:"updated_at"`
+	UpdatedBy         *readUserBackOfficePayload `json:"updated_by"`
 }
 
 func (payload *RegisterProductPayload) Validate() (err error) {
@@ -113,9 +118,9 @@ func (payload *RegisterProductPayload) ToEntity(userData sqlc.GetUserBackofficeR
 	return
 }
 
-func (payload *UpdateProductPayload) ToEntity(productData sqlc.GetProductRow) (data sqlc.UpdateProductParams) {
+func (payload *UpdateProductPayload) ToEntity(productData sqlc.GetUserBackofficeRow, guid string) (data sqlc.UpdateProductParams) {
 	data = sqlc.UpdateProductParams{
-		Guid: productData.Guid,
+		Guid: guid,
 		Name: sql.NullString{
 			String: payload.Name,
 			Valid:  true,
@@ -163,13 +168,19 @@ func (payload *ListProductPayload) ToEntity() (data sqlc.ListProductParams) {
 	return
 }
 
-func ToPayloadRegisterProduct(productData sqlc.Product) (payload readRegisterProductPayload) {
+func ToPayloadRegisterProduct(productData sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow) (payload readRegisterProductPayload) {
 	payload = readRegisterProductPayload{
 		GUID:        productData.Guid,
 		Name:        productData.Name.String,
 		Description: productData.Description,
 		CreatedAt:   productData.CreatedAt,
-		CreatedBy:   productData.CreatedBy,
+		CreatedBy: readUserBackOfficePayload{
+			GUID: userBackoffice.Guid,
+		},
+	}
+
+	if userBackoffice.Name.Valid {
+		payload.CreatedBy.Name = userBackoffice.Name.String
 	}
 
 	if productData.ProductPictureUrl.Valid {
@@ -179,13 +190,19 @@ func ToPayloadRegisterProduct(productData sqlc.Product) (payload readRegisterPro
 	return
 }
 
-func ToPayloadUpdateProduct(productData sqlc.Product) (payload readUpdateProductPayload) {
+func ToPayloadUpdateProduct(productData sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow) (payload readUpdateProductPayload) {
 	payload = readUpdateProductPayload{
 		GUID:        productData.Guid,
 		Name:        productData.Name.String,
 		Description: productData.Description,
-		CreatedAt:   productData.CreatedAt,
-		CreatedBy:   productData.CreatedBy,
+		UpdatedAt:   productData.UpdatedAt.Time,
+		UpdatedBy: readUserBackOfficePayload{
+			GUID: userBackoffice.Guid,
+		},
+	}
+
+	if userBackoffice.Name.Valid {
+		payload.UpdatedBy.Name = userBackoffice.Name.String
 	}
 
 	if productData.ProductPictureUrl.Valid {
@@ -201,7 +218,17 @@ func ToPayloadProduct(productData sqlc.GetProductRow) (payload readProductPayloa
 		Name:        productData.Name.String,
 		Description: productData.Description,
 		CreatedAt:   productData.CreatedAt,
-		CreatedBy:   productData.CreatedBy,
+		CreatedBy: readUserBackOfficePayload{
+			GUID: productData.UserID.String,
+		},
+	}
+
+	if productData.UserID.Valid {
+		payload.CreatedBy.GUID = productData.UserID.String
+	}
+
+	if productData.UserName.Valid {
+		payload.CreatedBy.Name = productData.UserName.String
 	}
 
 	if productData.ProductPictureUrl.Valid {
@@ -213,7 +240,10 @@ func ToPayloadProduct(productData sqlc.GetProductRow) (payload readProductPayloa
 	}
 
 	if productData.UpdatedBy.Valid {
-		payload.UpdatedBy = &productData.UpdatedBy.String
+		payload.UpdatedBy = &readUserBackOfficePayload{
+			GUID: productData.UserIDUpdate.String,
+			Name: productData.UserNameUpdate.String,
+		}
 	}
 
 	return

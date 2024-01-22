@@ -52,8 +52,14 @@ func (q *Queries) GetCountProductList(ctx context.Context, arg GetCountProductLi
 
 const getProduct = `-- name: GetProduct :one
 SELECT
-    guid, name, product_picture_url, description, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
-FROM product p
+    p.guid, p.name, p.product_picture_url, p.description, p.created_at, p.created_by,
+    p.updated_at, p.updated_by, p.deleted_at, p.deleted_by,
+    ub_created.name AS user_name, ub_created.guid AS user_id,
+    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+FROM
+    product p
+        LEFT JOIN user_backoffice ub_created ON ub_created.guid = p.created_by
+        LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
 WHERE
     p.guid = $1
   AND p.deleted_at IS NULL
@@ -70,6 +76,10 @@ type GetProductRow struct {
 	UpdatedBy         sql.NullString `json:"updated_by"`
 	DeletedAt         sql.NullTime   `json:"deleted_at"`
 	DeletedBy         sql.NullString `json:"deleted_by"`
+	UserName          sql.NullString `json:"user_name"`
+	UserID            sql.NullString `json:"user_id"`
+	UserNameUpdate    sql.NullString `json:"user_name_update"`
+	UserIDUpdate      sql.NullString `json:"user_id_update"`
 }
 
 func (q *Queries) GetProduct(ctx context.Context, guid string) (GetProductRow, error) {
@@ -86,6 +96,10 @@ func (q *Queries) GetProduct(ctx context.Context, guid string) (GetProductRow, e
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
+		&i.UserName,
+		&i.UserID,
+		&i.UserNameUpdate,
+		&i.UserIDUpdate,
 	)
 	return i, err
 }
@@ -133,19 +147,25 @@ func (q *Queries) InsertProduct(ctx context.Context, arg InsertProductParams) (P
 
 const listProduct = `-- name: ListProduct :many
 SELECT
-    guid, name, product_picture_url, description, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
-FROM product
+    p.guid, p.name, p.product_picture_url, p.description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by,
+    ub_created.name AS user_name, ub_created.guid AS user_id,
+    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+FROM
+    product p
+        LEFT JOIN user_backoffice ub_created ON ub_created.guid = p.created_by
+        LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
 WHERE
-    (CASE WHEN $1::bool THEN LOWER(name) LIKE LOWER($2) ELSE TRUE END)
-    AND deleted_at IS NULL
-ORDER BY (CASE WHEN $3 = 'id ASC' THEN guid END) ASC,
-         (CASE WHEN $3 = 'id DESC' THEN guid END) DESC,
-         (CASE WHEN $3 = 'name ASC' THEN name END) ASC,
-         (CASE WHEN $3 = 'name DESC' THEN name END) DESC,
-         (CASE WHEN $3 = 'created_at ASC' THEN created_at END) ASC,
-         (CASE WHEN $3 = 'created_at DESC' THEN created_at END) DESC,
-         product.created_at DESC
-LIMIT $5
+    (CASE WHEN $1::bool THEN LOWER(p.name) LIKE LOWER($2) ELSE TRUE END)
+  AND p.deleted_at IS NULL
+ORDER BY
+    (CASE WHEN $3 = 'id ASC' THEN p.guid END) ASC,
+    (CASE WHEN $3 = 'id DESC' THEN p.guid END) DESC,
+    (CASE WHEN $3 = 'name ASC' THEN p.name END) ASC,
+    (CASE WHEN $3 = 'name DESC' THEN p.name END) DESC,
+    (CASE WHEN $3 = 'created_at ASC' THEN p.created_at END) ASC,
+    (CASE WHEN $3 = 'created_at DESC' THEN p.created_at END) DESC,
+    p.created_at DESC
+    LIMIT $5
 OFFSET $4
 `
 
@@ -168,6 +188,10 @@ type ListProductRow struct {
 	UpdatedBy         sql.NullString `json:"updated_by"`
 	DeletedAt         sql.NullTime   `json:"deleted_at"`
 	DeletedBy         sql.NullString `json:"deleted_by"`
+	UserName          sql.NullString `json:"user_name"`
+	UserID            sql.NullString `json:"user_id"`
+	UserNameUpdate    sql.NullString `json:"user_name_update"`
+	UserIDUpdate      sql.NullString `json:"user_id_update"`
 }
 
 func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]ListProductRow, error) {
@@ -196,6 +220,10 @@ func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]Lis
 			&i.UpdatedBy,
 			&i.DeletedAt,
 			&i.DeletedBy,
+			&i.UserName,
+			&i.UserID,
+			&i.UserNameUpdate,
+			&i.UserIDUpdate,
 		); err != nil {
 			return nil, err
 		}

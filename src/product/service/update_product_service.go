@@ -9,7 +9,7 @@ import (
 	"github.com/wit-id/blueprint-backend-go/toolkit/log"
 )
 
-func (s *ProductService) CreateProduct(ctx context.Context, request sqlc.InsertProductParams) (product sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow, err error) {
+func (s *ProductService) UpdateProduct(ctx context.Context, request sqlc.UpdateProductParams) (product sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow, err error) {
 	tx, err := s.mainDB.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		log.FromCtx(ctx).Error(err, "failed begin tx")
@@ -31,17 +31,17 @@ func (s *ProductService) CreateProduct(ctx context.Context, request sqlc.InsertP
 		}
 	}()
 
-	userBackoffice, err = q.GetUserBackoffice(ctx, request.CreatedBy)
+	userBackoffice, err = q.GetUserBackoffice(ctx, request.UpdatedBy.String)
 	if err != nil {
-		log.FromCtx(ctx).Error(err, "failed get user backoffice by guid")
-		err = errors.WithStack(httpservice.ErrUnknownSource)
+		log.FromCtx(ctx).Error(err, "failed get user backoffice data")
+		err = errors.WithStack(httpservice.ErrUserNotFound)
 
 		return
 	}
 
-	product, err = q.InsertProduct(ctx, request)
+	product, err = q.UpdateProduct(ctx, request)
 	if err != nil {
-		log.FromCtx(ctx).Error(err, "failed insert product")
+		log.FromCtx(ctx).Error(err, "failed update product")
 		err = errors.WithStack(httpservice.ErrUnknownSource)
 
 		return

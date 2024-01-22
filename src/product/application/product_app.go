@@ -25,13 +25,12 @@ func AddRouteProduct(s *httpservice.Service, cfg config.KVStore, e *echo.Echo) {
 		return c.String(http.StatusOK, "product ok")
 	})
 	product.Use(mddw.ValidateToken)
-	product.Use(mddw.ValidateUserBackofficeLogin)
 
-	product.POST("/create", createProduct(svc))
-	//product.PUT("/is-active/:guid", updateIsActiveUserBackoffice(svc))
-	//product.DELETE("/:guid", deleteUserBackoffice(svc))
 	product.POST("/list", listProduct(svc))
 	product.GET("/:guid", getProduct(svc))
+	product.POST("/create", createProduct(svc), mddw.ValidateUserBackofficeLogin)
+	product.PUT("/:guid", updateProduct(svc), mddw.ValidateUserBackofficeLogin)
+	//product.DELETE("/:guid", deleteUserBackoffice(svc))
 }
 
 func createProduct(svc *service.ProductService) echo.HandlerFunc {
@@ -47,12 +46,39 @@ func createProduct(svc *service.ProductService) echo.HandlerFunc {
 			return err
 		}
 
-		data, err := svc.CreateProduct(ctx.Request().Context(), request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)))
+		data, userBackoffice, err := svc.CreateProduct(ctx.Request().Context(), request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)))
 		if err != nil {
 			return err
 		}
 
-		return httpservice.ResponseData(ctx, payload.ToPayloadRegisterProduct(data), nil)
+		return httpservice.ResponseData(ctx, payload.ToPayloadRegisterProduct(data, userBackoffice), nil)
+	}
+}
+
+func updateProduct(svc *service.ProductService) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		guid := ctx.Param("guid")
+		if guid == "" {
+			return errors.Wrap(httpservice.ErrBadRequest, httpservice.MsgInvalidIDParam)
+		}
+
+		var request payload.UpdateProductPayload
+		if err := ctx.Bind(&request); err != nil {
+			log.FromCtx(ctx.Request().Context()).Error(err, "failed to parse request")
+			return errors.WithStack(httpservice.ErrBadRequest)
+		}
+
+		// Validate request
+		if err := request.Validate(); err != nil {
+			return err
+		}
+
+		data, userBackoffice, err := svc.UpdateProduct(ctx.Request().Context(), request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow), guid))
+		if err != nil {
+			return err
+		}
+
+		return httpservice.ResponseData(ctx, payload.ToPayloadUpdateProduct(data, userBackoffice), nil)
 	}
 }
 
