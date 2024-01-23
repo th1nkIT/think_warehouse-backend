@@ -17,4 +17,7 @@ const (
 	MddwUserHandheld   = "user-handheld"
 	MddwUserBackoffice = "user-backoffice"
 	MddwKeyRole        = "role-data"
+
+	StatusActive   = "active"
+	StatusInactive = "inactive"
 )
