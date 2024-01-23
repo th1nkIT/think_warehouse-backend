@@ -35,7 +35,6 @@ const getCountProductList = `-- name: GetCountProductList :one
 SELECT COUNT(p.id) FROM product p
 WHERE
     (CASE WHEN $1::bool THEN LOWER(p.name) LIKE LOWER($2) ELSE TRUE END)
-    AND p.deleted_at IS NULL
 `
 
 type GetCountProductListParams struct {
@@ -62,7 +61,6 @@ FROM
         LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
 WHERE
     p.guid = $1
-  AND p.deleted_at IS NULL
 `
 
 type GetProductRow struct {
@@ -156,7 +154,6 @@ FROM
         LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
 WHERE
     (CASE WHEN $1::bool THEN LOWER(p.name) LIKE LOWER($2) ELSE TRUE END)
-  AND p.deleted_at IS NULL
 ORDER BY
     (CASE WHEN $3 = 'id ASC' THEN p.guid END) ASC,
     (CASE WHEN $3 = 'id DESC' THEN p.guid END) DESC,
@@ -236,6 +233,28 @@ func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]Lis
 		return nil, err
 	}
 	return items, nil
+}
+
+const reactiveProduct = `-- name: ReactiveProduct :exec
+UPDATE product
+SET
+    deleted_at = NULL,
+    deleted_by = NULL,
+    updated_at = (now() at time zone 'UTC')::TIMESTAMP,
+    updated_by = $1
+WHERE
+    guid = $2
+AND deleted_at IS NOT NULL
+`
+
+type ReactiveProductParams struct {
+	UpdatedBy sql.NullString `json:"updated_by"`
+	Guid      string         `json:"guid"`
+}
+
+func (q *Queries) ReactiveProduct(ctx context.Context, arg ReactiveProductParams) error {
+	_, err := q.db.ExecContext(ctx, reactiveProduct, arg.UpdatedBy, arg.Guid)
+	return err
 }
 
 const updateProduct = `-- name: UpdateProduct :one
