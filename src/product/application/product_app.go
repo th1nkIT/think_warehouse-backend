@@ -24,13 +24,12 @@ func AddRouteProduct(s *httpservice.Service, cfg config.KVStore, e *echo.Echo) {
 	product.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "product ok")
 	})
-	product.Use(mddw.ValidateToken)
 
-	product.POST("/list", listProduct(svc))
+	product.POST("", listProduct(svc))
 	product.GET("/:guid", getProduct(svc))
-	product.POST("/create", createProduct(svc), mddw.ValidateUserBackofficeLogin)
-	product.PUT("/:guid", updateProduct(svc), mddw.ValidateUserBackofficeLogin)
-	//product.DELETE("/:guid", deleteUserBackoffice(svc))
+	product.POST("/create", createProduct(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
+	product.PUT("/:guid", updateProduct(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
+	product.DELETE("/:guid", deleteProduct(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
 }
 
 func createProduct(svc *service.ProductService) echo.HandlerFunc {
@@ -79,6 +78,23 @@ func updateProduct(svc *service.ProductService) echo.HandlerFunc {
 		}
 
 		return httpservice.ResponseData(ctx, payload.ToPayloadUpdateProduct(data, userBackoffice), nil)
+	}
+}
+
+func deleteProduct(svc *service.ProductService) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		guid := ctx.Param("guid")
+		if guid == "" {
+			return errors.Wrap(httpservice.ErrBadRequest, httpservice.MsgInvalidIDParam)
+		}
+
+		userData := ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)
+
+		if err := svc.DeleteProduct(ctx.Request().Context(), guid, userData); err != nil {
+			return err
+		}
+
+		return httpservice.ResponseData(ctx, nil, nil)
 	}
 }
 
