@@ -143,17 +143,16 @@ type UserHandheld struct {
 }
 
 type Warehouse struct {
-	ID          int64          `json:"id"`
-	Guid        string         `json:"guid"`
-	Name        sql.NullString `json:"name"`
-	Address     string         `json:"address"`
-	PhoneNumber string         `json:"phone_number"`
-	IsActive    sql.NullBool   `json:"is_active"`
-	CreatedAt   time.Time      `json:"created_at"`
-	CreatedBy   string         `json:"created_by"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
-	UpdatedBy   sql.NullString `json:"updated_by"`
-	DeletedAt   sql.NullTime   `json:"deleted_at"`
-	DeletedBy   sql.NullString `json:"deleted_by"`
-	LastLogin   sql.NullTime   `json:"last_login"`
+	ID            int64          `json:"id"`
+	Guid          string         `json:"guid"`
+	WarehouseCode string         `json:"warehouse_code"`
+	Name          sql.NullString `json:"name"`
+	Address       string         `json:"address"`
+	PhoneNumber   string         `json:"phone_number"`
+	CreatedAt     time.Time      `json:"created_at"`
+	CreatedBy     string         `json:"created_by"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	UpdatedBy     sql.NullString `json:"updated_by"`
+	DeletedAt     sql.NullTime   `json:"deleted_at"`
+	DeletedBy     sql.NullString `json:"deleted_by"`
 }

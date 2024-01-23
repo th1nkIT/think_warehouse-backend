@@ -23,7 +23,8 @@ var (
 	ErrUnauthorizedUser      = errors.New("unauthorized user")
 	ErrInActiveUser          = errors.New("user not active")
 
-	ErrProductNotFound = errors.New("product not found")
+	ErrProductNotFound   = errors.New("product not found")
+	ErrWarehouseNotFound = errors.New("warehouse not found")
 
 	ErrRoleNotFound = errors.New("role not found")
 

@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const deleteWarehouse = `-- name: DeleteWarehouse :exec
@@ -30,139 +31,244 @@ func (q *Queries) DeleteWarehouse(ctx context.Context, arg DeleteWarehouseParams
 	return err
 }
 
-const findWithGUIDWarehouse = `-- name: FindWithGUIDWarehouse :many
-SELECT id, guid, name, address, phone_number, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by, last_login
-FROM warehouse
-WHERE guid = $1
+const getCountWarehouse = `-- name: GetCountWarehouse :one
+SELECT COUNT(w.id) FROM warehouse w
+WHERE
+    (CASE WHEN $1::bool THEN LOWER(w.name) LIKE LOWER($2) ELSE TRUE END)
 `
 
-func (q *Queries) FindWithGUIDWarehouse(ctx context.Context, guid string) ([]Warehouse, error) {
-	rows, err := q.db.QueryContext(ctx, findWithGUIDWarehouse, guid)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Warehouse
-	for rows.Next() {
-		var i Warehouse
-		if err := rows.Scan(
-			&i.ID,
-			&i.Guid,
-			&i.Name,
-			&i.Address,
-			&i.PhoneNumber,
-			&i.IsActive,
-			&i.CreatedAt,
-			&i.CreatedBy,
-			&i.UpdatedAt,
-			&i.UpdatedBy,
-			&i.DeletedAt,
-			&i.DeletedBy,
-			&i.LastLogin,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type GetCountWarehouseParams struct {
+	SetName bool   `json:"set_name"`
+	Name    string `json:"name"`
 }
 
-const insertWarehouse = `-- name: InsertWarehouse :one
-INSERT INTO warehouse 
-        (guid, name, address, phone_number, is_active, created_at, created_by)
-    VALUES
-        ($1, $2, $3, $4, $5, (now() at time zone 'UTC')::TIMESTAMP, $6)
-RETURNING warehouse.id, warehouse.guid, warehouse.name, warehouse.address, warehouse.phone_number, warehouse.is_active, warehouse.created_at, warehouse.created_by, warehouse.updated_at, warehouse.updated_by, warehouse.deleted_at, warehouse.deleted_by, warehouse.last_login
+func (q *Queries) GetCountWarehouse(ctx context.Context, arg GetCountWarehouseParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getCountWarehouse, arg.SetName, arg.Name)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getWarehouse = `-- name: GetWarehouse :one
+SELECT
+    w.guid, w.name, w.address, w.phone_number, w.warehouse_code, w.created_at,
+       w.created_by, w.updated_at, w.updated_by, w.deleted_at, w.deleted_by,
+    ub_created.name AS user_name, ub_created.guid AS user_id,
+    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+FROM
+    warehouse w
+        LEFT JOIN user_backoffice ub_created ON ub_created.guid = w.created_by
+        LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = w.updated_by
+WHERE
+    w.guid = $1
 `
 
-type InsertWarehouseParams struct {
-	Guid        string         `json:"guid"`
-	Name        sql.NullString `json:"name"`
-	Address     string         `json:"address"`
-	PhoneNumber string         `json:"phone_number"`
-	IsActive    sql.NullBool   `json:"is_active"`
-	CreatedBy   string         `json:"created_by"`
+type GetWarehouseRow struct {
+	Guid           string         `json:"guid"`
+	Name           sql.NullString `json:"name"`
+	Address        string         `json:"address"`
+	PhoneNumber    string         `json:"phone_number"`
+	WarehouseCode  string         `json:"warehouse_code"`
+	CreatedAt      time.Time      `json:"created_at"`
+	CreatedBy      string         `json:"created_by"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	UpdatedBy      sql.NullString `json:"updated_by"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
+	DeletedBy      sql.NullString `json:"deleted_by"`
+	UserName       sql.NullString `json:"user_name"`
+	UserID         sql.NullString `json:"user_id"`
+	UserNameUpdate sql.NullString `json:"user_name_update"`
+	UserIDUpdate   sql.NullString `json:"user_id_update"`
 }
 
-func (q *Queries) InsertWarehouse(ctx context.Context, arg InsertWarehouseParams) (Warehouse, error) {
-	row := q.db.QueryRowContext(ctx, insertWarehouse,
-		arg.Guid,
-		arg.Name,
-		arg.Address,
-		arg.PhoneNumber,
-		arg.IsActive,
-		arg.CreatedBy,
-	)
-	var i Warehouse
+func (q *Queries) GetWarehouse(ctx context.Context, guid string) (GetWarehouseRow, error) {
+	row := q.db.QueryRowContext(ctx, getWarehouse, guid)
+	var i GetWarehouseRow
 	err := row.Scan(
-		&i.ID,
 		&i.Guid,
 		&i.Name,
 		&i.Address,
 		&i.PhoneNumber,
-		&i.IsActive,
+		&i.WarehouseCode,
 		&i.CreatedAt,
 		&i.CreatedBy,
 		&i.UpdatedAt,
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
-		&i.LastLogin,
+		&i.UserName,
+		&i.UserID,
+		&i.UserNameUpdate,
+		&i.UserIDUpdate,
 	)
 	return i, err
 }
 
-const listWithFilterWarehouse = `-- name: ListWithFilterWarehouse :many
-SELECT id, guid, name, address, phone_number, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by, last_login
-FROM warehouse
+const getWarehouseByWarehouseCode = `-- name: GetWarehouseByWarehouseCode :one
+SELECT
+    w.guid, w.name, w.address, w.phone_number, w.warehouse_code, w.created_at,
+    w.created_by, w.updated_at, w.updated_by, w.deleted_at, w.deleted_by,
+    ub_created.name AS user_name, ub_created.guid AS user_id,
+    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+FROM
+    warehouse w
+        LEFT JOIN user_backoffice ub_created ON ub_created.guid = w.created_by
+        LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = w.updated_by
+
 WHERE
-    (CASE WHEN $1::bool THEN LOWER(name) LIKE LOWER($2) ELSE TRUE END)
-    AND(CASE WHEN $3::bool THEN LOWER(address) LIKE LOWER($4) ELSE TRUE END)
-    AND(CASE WHEN $5::bool THEN LOWER(phone_number) LIKE LOWER($6) ELSE TRUE END)
-    AND deleted_at IS NULL
-ORDER BY (CASE WHEN $7 = 'id ASC' THEN guid END) ASC,
-         (CASE WHEN $7 = 'id DESC' THEN guid END) DESC,
-         (CASE WHEN $7 = 'name ASC' THEN name END) ASC,
-         (CASE WHEN $7 = 'name DESC' THEN name END) DESC,
-         (CASE WHEN $7 = 'address ASC' THEN address END) ASC,
-         (CASE WHEN $7 = 'address DESC' THEN address END) DESC,
-         (CASE WHEN $7 = 'phone_number ASC' THEN phone_number END) ASC,
-         (CASE WHEN $7 = 'phone_number DESC' THEN phone_number END) DESC,
-         (CASE WHEN $7 = 'is_active ASC' THEN is_active END) ASC,
-         (CASE WHEN $7 = 'is_active DESC' THEN is_active END) DESC,
-         (CASE WHEN $7 = 'created_at ASC' THEN created_at END) ASC,
-         (CASE WHEN $7 = 'created_at DESC' THEN created_at END) DESC,
-         warehouse.created_at DESC
-LIMIT $9
+    w.warehouse_code = $1
+`
+
+type GetWarehouseByWarehouseCodeRow struct {
+	Guid           string         `json:"guid"`
+	Name           sql.NullString `json:"name"`
+	Address        string         `json:"address"`
+	PhoneNumber    string         `json:"phone_number"`
+	WarehouseCode  string         `json:"warehouse_code"`
+	CreatedAt      time.Time      `json:"created_at"`
+	CreatedBy      string         `json:"created_by"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	UpdatedBy      sql.NullString `json:"updated_by"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
+	DeletedBy      sql.NullString `json:"deleted_by"`
+	UserName       sql.NullString `json:"user_name"`
+	UserID         sql.NullString `json:"user_id"`
+	UserNameUpdate sql.NullString `json:"user_name_update"`
+	UserIDUpdate   sql.NullString `json:"user_id_update"`
+}
+
+func (q *Queries) GetWarehouseByWarehouseCode(ctx context.Context, warehouseCode string) (GetWarehouseByWarehouseCodeRow, error) {
+	row := q.db.QueryRowContext(ctx, getWarehouseByWarehouseCode, warehouseCode)
+	var i GetWarehouseByWarehouseCodeRow
+	err := row.Scan(
+		&i.Guid,
+		&i.Name,
+		&i.Address,
+		&i.PhoneNumber,
+		&i.WarehouseCode,
+		&i.CreatedAt,
+		&i.CreatedBy,
+		&i.UpdatedAt,
+		&i.UpdatedBy,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.UserName,
+		&i.UserID,
+		&i.UserNameUpdate,
+		&i.UserIDUpdate,
+	)
+	return i, err
+}
+
+const insertWarehouse = `-- name: InsertWarehouse :one
+INSERT INTO warehouse 
+        (guid, warehouse_code, name, address, phone_number, created_at, created_by)
+    VALUES
+        ($1, $2,$3, $4, $5, (now() at time zone 'UTC')::TIMESTAMP, $6)
+RETURNING warehouse.id, warehouse.guid, warehouse.warehouse_code, warehouse.name, warehouse.address, warehouse.phone_number, warehouse.created_at, warehouse.created_by, warehouse.updated_at, warehouse.updated_by, warehouse.deleted_at, warehouse.deleted_by
+`
+
+type InsertWarehouseParams struct {
+	Guid          string         `json:"guid"`
+	WarehouseCode string         `json:"warehouse_code"`
+	Name          sql.NullString `json:"name"`
+	Address       string         `json:"address"`
+	PhoneNumber   string         `json:"phone_number"`
+	CreatedBy     string         `json:"created_by"`
+}
+
+func (q *Queries) InsertWarehouse(ctx context.Context, arg InsertWarehouseParams) (Warehouse, error) {
+	row := q.db.QueryRowContext(ctx, insertWarehouse,
+		arg.Guid,
+		arg.WarehouseCode,
+		arg.Name,
+		arg.Address,
+		arg.PhoneNumber,
+		arg.CreatedBy,
+	)
+	var i Warehouse
+	err := row.Scan(
+		&i.ID,
+		&i.Guid,
+		&i.WarehouseCode,
+		&i.Name,
+		&i.Address,
+		&i.PhoneNumber,
+		&i.CreatedAt,
+		&i.CreatedBy,
+		&i.UpdatedAt,
+		&i.UpdatedBy,
+		&i.DeletedAt,
+		&i.DeletedBy,
+	)
+	return i, err
+}
+
+const listWarehouse = `-- name: ListWarehouse :many
+SELECT w.guid, w.name, w.address, w.phone_number, w.warehouse_code, w.created_at,
+       w.created_by, w.updated_at, w.updated_by, w.deleted_at, w.deleted_by,
+       ub_created.name AS user_name, ub_created.guid AS user_id,
+       ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+FROM
+    warehouse w
+        LEFT JOIN user_backoffice ub_created ON ub_created.guid = w.created_by
+        LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = w.updated_by
+WHERE
+    (CASE WHEN $1::bool THEN LOWER(w.name) LIKE LOWER($2) ELSE TRUE END)
+  AND (CASE WHEN $3::bool THEN LOWER(w.warehouse_code) LIKE LOWER($4) ELSE TRUE END)
+  AND (CASE WHEN $5::bool THEN
+                (w.deleted_at IS NULL AND $6 = 'active') OR
+                (w.deleted_at IS NOT NULL AND $6 = 'inactive')
+            ELSE TRUE END)
+ORDER BY (CASE WHEN $7 = 'id ASC' THEN w.guid END) ASC,
+         (CASE WHEN $7 = 'id DESC' THEN w.guid END) DESC,
+         (CASE WHEN $7 = 'name ASC' THEN w.name END) ASC,
+         (CASE WHEN $7 = 'name DESC' THEN w.name END) DESC,
+         (CASE WHEN $7 = 'created_at ASC' THEN w.created_at END) ASC,
+         (CASE WHEN $7 = 'created_at DESC' THEN w.created_at END) DESC,
+         w.created_at DESC
+    LIMIT $9
 OFFSET $8
 `
 
-type ListWithFilterWarehouseParams struct {
-	SetName        bool        `json:"set_name"`
-	Name           string      `json:"name"`
-	SetAddress     bool        `json:"set_address"`
-	Address        string      `json:"address"`
-	SetPhoneNumber bool        `json:"set_phone_number"`
-	PhoneNumber    string      `json:"phone_number"`
-	OrderParam     interface{} `json:"order_param"`
-	OffsetPage     int32       `json:"offset_page"`
-	LimitData      int32       `json:"limit_data"`
+type ListWarehouseParams struct {
+	SetName          bool        `json:"set_name"`
+	Name             string      `json:"name"`
+	SetWarehouseCode bool        `json:"set_warehouse_code"`
+	WarehouseCode    string      `json:"warehouse_code"`
+	SetActive        bool        `json:"set_active"`
+	Active           interface{} `json:"active"`
+	OrderParam       interface{} `json:"order_param"`
+	OffsetPage       int32       `json:"offset_page"`
+	LimitData        int32       `json:"limit_data"`
 }
 
-func (q *Queries) ListWithFilterWarehouse(ctx context.Context, arg ListWithFilterWarehouseParams) ([]Warehouse, error) {
-	rows, err := q.db.QueryContext(ctx, listWithFilterWarehouse,
+type ListWarehouseRow struct {
+	Guid           string         `json:"guid"`
+	Name           sql.NullString `json:"name"`
+	Address        string         `json:"address"`
+	PhoneNumber    string         `json:"phone_number"`
+	WarehouseCode  string         `json:"warehouse_code"`
+	CreatedAt      time.Time      `json:"created_at"`
+	CreatedBy      string         `json:"created_by"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	UpdatedBy      sql.NullString `json:"updated_by"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
+	DeletedBy      sql.NullString `json:"deleted_by"`
+	UserName       sql.NullString `json:"user_name"`
+	UserID         sql.NullString `json:"user_id"`
+	UserNameUpdate sql.NullString `json:"user_name_update"`
+	UserIDUpdate   sql.NullString `json:"user_id_update"`
+}
+
+func (q *Queries) ListWarehouse(ctx context.Context, arg ListWarehouseParams) ([]ListWarehouseRow, error) {
+	rows, err := q.db.QueryContext(ctx, listWarehouse,
 		arg.SetName,
 		arg.Name,
-		arg.SetAddress,
-		arg.Address,
-		arg.SetPhoneNumber,
-		arg.PhoneNumber,
+		arg.SetWarehouseCode,
+		arg.WarehouseCode,
+		arg.SetActive,
+		arg.Active,
 		arg.OrderParam,
 		arg.OffsetPage,
 		arg.LimitData,
@@ -171,23 +277,25 @@ func (q *Queries) ListWithFilterWarehouse(ctx context.Context, arg ListWithFilte
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Warehouse
+	var items []ListWarehouseRow
 	for rows.Next() {
-		var i Warehouse
+		var i ListWarehouseRow
 		if err := rows.Scan(
-			&i.ID,
 			&i.Guid,
 			&i.Name,
 			&i.Address,
 			&i.PhoneNumber,
-			&i.IsActive,
+			&i.WarehouseCode,
 			&i.CreatedAt,
 			&i.CreatedBy,
 			&i.UpdatedAt,
 			&i.UpdatedBy,
 			&i.DeletedAt,
 			&i.DeletedBy,
-			&i.LastLogin,
+			&i.UserName,
+			&i.UserID,
+			&i.UserNameUpdate,
+			&i.UserIDUpdate,
 		); err != nil {
 			return nil, err
 		}
@@ -202,51 +310,69 @@ func (q *Queries) ListWithFilterWarehouse(ctx context.Context, arg ListWithFilte
 	return items, nil
 }
 
+const reactiveWarehouse = `-- name: ReactiveWarehouse :exec
+UPDATE warehouse
+SET
+    deleted_at = NULL,
+    deleted_by = NULL,
+    updated_at = (now() at time zone 'UTC')::TIMESTAMP,
+    updated_by = $1
+WHERE
+    guid = $2
+  AND deleted_at IS NOT NULL
+`
+
+type ReactiveWarehouseParams struct {
+	UpdatedBy sql.NullString `json:"updated_by"`
+	Guid      string         `json:"guid"`
+}
+
+func (q *Queries) ReactiveWarehouse(ctx context.Context, arg ReactiveWarehouseParams) error {
+	_, err := q.db.ExecContext(ctx, reactiveWarehouse, arg.UpdatedBy, arg.Guid)
+	return err
+}
+
 const updateWarehouse = `-- name: UpdateWarehouse :one
 UPDATE warehouse 
-SET name = $1, 
-    address = $2, 
+SET name = $1,
+    address = $2,
     phone_number = $3,
-    is_active = $4, 
-    updated_by = $5,
+    updated_by = $4,
     updated_at = (now() at time zone 'UTC')::TIMESTAMP 
-WHERE guid = $6
-RETURNING warehouse.id, warehouse.guid, warehouse.name, warehouse.address, warehouse.phone_number, warehouse.is_active, warehouse.created_at, warehouse.created_by, warehouse.updated_at, warehouse.updated_by, warehouse.deleted_at, warehouse.deleted_by, warehouse.last_login
+WHERE guid = $5
+RETURNING warehouse.id, warehouse.guid, warehouse.warehouse_code, warehouse.name, warehouse.address, warehouse.phone_number, warehouse.created_at, warehouse.created_by, warehouse.updated_at, warehouse.updated_by, warehouse.deleted_at, warehouse.deleted_by
 `
 
 type UpdateWarehouseParams struct {
-	NewName      sql.NullString `json:"new_name"`
-	Address      string         `json:"address"`
-	PhoneNumber  string         `json:"phone_number"`
-	IsActive     sql.NullBool   `json:"is_active"`
-	NewCreatedBy sql.NullString `json:"new_created_by"`
-	Guid         string         `json:"guid"`
+	Name        sql.NullString `json:"name"`
+	Address     string         `json:"address"`
+	PhoneNumber string         `json:"phone_number"`
+	UpdatedBy   sql.NullString `json:"updated_by"`
+	Guid        string         `json:"guid"`
 }
 
 func (q *Queries) UpdateWarehouse(ctx context.Context, arg UpdateWarehouseParams) (Warehouse, error) {
 	row := q.db.QueryRowContext(ctx, updateWarehouse,
-		arg.NewName,
+		arg.Name,
 		arg.Address,
 		arg.PhoneNumber,
-		arg.IsActive,
-		arg.NewCreatedBy,
+		arg.UpdatedBy,
 		arg.Guid,
 	)
 	var i Warehouse
 	err := row.Scan(
 		&i.ID,
 		&i.Guid,
+		&i.WarehouseCode,
 		&i.Name,
 		&i.Address,
 		&i.PhoneNumber,
-		&i.IsActive,
 		&i.CreatedAt,
 		&i.CreatedBy,
 		&i.UpdatedAt,
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
-		&i.LastLogin,
 	)
 	return i, err
 }
