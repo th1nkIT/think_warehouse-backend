@@ -30,6 +30,7 @@ func AddRouteProduct(s *httpservice.Service, cfg config.KVStore, e *echo.Echo) {
 	product.POST("/create", createProduct(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
 	product.PUT("/:guid", updateProduct(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
 	product.DELETE("/:guid", deleteProduct(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
+	product.GET("/reactive/:guid", reactiveProduct(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
 }
 
 func createProduct(svc *service.ProductService) echo.HandlerFunc {
@@ -91,6 +92,23 @@ func deleteProduct(svc *service.ProductService) echo.HandlerFunc {
 		userData := ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)
 
 		if err := svc.DeleteProduct(ctx.Request().Context(), guid, userData); err != nil {
+			return err
+		}
+
+		return httpservice.ResponseData(ctx, nil, nil)
+	}
+}
+
+func reactiveProduct(svc *service.ProductService) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		guid := ctx.Param("guid")
+		if guid == "" {
+			return errors.Wrap(httpservice.ErrBadRequest, httpservice.MsgInvalidIDParam)
+		}
+
+		userData := ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)
+
+		if err := svc.ReactiveProduct(ctx.Request().Context(), guid, userData); err != nil {
 			return err
 		}
 

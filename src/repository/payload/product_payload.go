@@ -41,6 +41,7 @@ type readRegisterProductPayload struct {
 	Name              string                    `json:"name"`
 	ProductPictureUrl *string                   `json:"profile_picture_image_url"`
 	Description       string                    `json:"description"`
+	Status            string                    `json:"status"`
 	CreatedAt         time.Time                 `json:"created_at"`
 	CreatedBy         readUserBackOfficePayload `json:"created_by"`
 }
@@ -55,6 +56,7 @@ type readUpdateProductPayload struct {
 	Name              string                    `json:"name"`
 	ProductPictureUrl *string                   `json:"profile_picture_image_url"`
 	Description       string                    `json:"description"`
+	Status            string                    `json:"status"`
 	UpdatedAt         time.Time                 `json:"updated_at"`
 	UpdatedBy         readUserBackOfficePayload `json:"updated_by"`
 }
@@ -64,6 +66,7 @@ type readProductPayload struct {
 	Name              string                     `json:"name"`
 	ProductPictureUrl *string                    `json:"profile_picture_image_url"`
 	Description       string                     `json:"description"`
+	Status            string                     `json:"status"`
 	CreatedAt         time.Time                  `json:"created_at"`
 	CreatedBy         readUserBackOfficePayload  `json:"created_by"`
 	UpdatedAt         *time.Time                 `json:"updated_at"`
@@ -209,6 +212,12 @@ func ToPayloadUpdateProduct(productData sqlc.Product, userBackoffice sqlc.GetUse
 		payload.ProductPictureUrl = &productData.ProductPictureUrl.String
 	}
 
+	if productData.DeletedAt.Valid {
+		payload.Status = constants.StatusInactive
+	} else {
+		payload.Status = constants.StatusActive
+	}
+
 	return
 }
 
@@ -244,6 +253,12 @@ func ToPayloadProduct(productData sqlc.GetProductRow) (payload readProductPayloa
 			GUID: productData.UserIDUpdate.String,
 			Name: productData.UserNameUpdate.String,
 		}
+	}
+
+	if productData.DeletedAt.Valid {
+		payload.Status = constants.StatusInactive
+	} else {
+		payload.Status = constants.StatusActive
 	}
 
 	return
