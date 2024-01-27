@@ -4,14 +4,14 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/wit-id/blueprint-backend-go/common/constants"
+	"think_warehouse/common/constants"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/common/utility"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/common/utility"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/config"
 )
 
 type RegisterUserHandheldPayload struct {

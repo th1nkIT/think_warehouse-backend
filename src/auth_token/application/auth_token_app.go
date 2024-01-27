@@ -3,16 +3,16 @@ package application
 import (
 	"net/http"
 
-	"github.com/wit-id/blueprint-backend-go/common/jwt"
+	"think_warehouse/common/jwt"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/src/auth_token/service"
-	"github.com/wit-id/blueprint-backend-go/src/middleware"
-	"github.com/wit-id/blueprint-backend-go/src/repository/payload"
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/src/auth_token/service"
+	"think_warehouse/src/middleware"
+	"think_warehouse/src/repository/payload"
+	"think_warehouse/toolkit/config"
+	"think_warehouse/toolkit/log"
 )
 
 func AddRouteAuthToken(s *httpservice.Service, cfg config.KVStore, e *echo.Echo) {

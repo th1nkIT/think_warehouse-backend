@@ -3,8 +3,8 @@ package grpckit
 import (
 	"context"
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/grpckit/grpc_health_v1"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/toolkit/grpckit/grpc_health_v1"
+	"think_warehouse/toolkit/log"
 )
 
 // HealthCheckServer is default grpc health check provider.

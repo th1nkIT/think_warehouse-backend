@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
-	"github.com/wit-id/blueprint-backend-go/toolkit/db"
+	"think_warehouse/toolkit/config"
+	"think_warehouse/toolkit/db"
 )
 
 func NewFromConfig(cfg config.KVStore, path string) (*sql.DB, error) {

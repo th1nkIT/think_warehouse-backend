@@ -2,28 +2,28 @@ package echohttp
 
 import (
 	"context"
-	productHandledApp "github.com/wit-id/blueprint-backend-go/src/product/product/application"
-	productCategoryHandledApp "github.com/wit-id/blueprint-backend-go/src/product/product_category/application"
 	"net/http"
+	productHandledApp "think_warehouse/src/product/product/application"
+	productCategoryHandledApp "think_warehouse/src/product/product_category/application"
 
-	"github.com/wit-id/blueprint-backend-go/common/constants"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
-	"github.com/wit-id/blueprint-backend-go/toolkit/echokit"
+	"think_warehouse/common/constants"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/toolkit/config"
+	"think_warehouse/toolkit/echokit"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	authTokenApp "github.com/wit-id/blueprint-backend-go/src/auth_token/application"
-	authorizationBackofficeApp "github.com/wit-id/blueprint-backend-go/src/authorization/backoffice/application"
-	authorizationHandheldApp "github.com/wit-id/blueprint-backend-go/src/authorization/handheld/application"
+	authTokenApp "think_warehouse/src/auth_token/application"
+	authorizationBackofficeApp "think_warehouse/src/authorization/backoffice/application"
+	authorizationHandheldApp "think_warehouse/src/authorization/handheld/application"
 
-	userBackofficeApp "github.com/wit-id/blueprint-backend-go/src/user_backoffice/application"
-	userBackofficeRoleApp "github.com/wit-id/blueprint-backend-go/src/user_backoffice_role/application"
+	userBackofficeApp "think_warehouse/src/user_backoffice/application"
+	userBackofficeRoleApp "think_warehouse/src/user_backoffice_role/application"
 
-	userHandheldApp "github.com/wit-id/blueprint-backend-go/src/user_handheld/application"
+	userHandheldApp "think_warehouse/src/user_handheld/application"
 
-	warehouseHandledApp "github.com/wit-id/blueprint-backend-go/src/warehouse/application"
+	warehouseHandledApp "think_warehouse/src/warehouse/application"
 )
 
 func RunEchoHTTPService(ctx context.Context, s *httpservice.Service, cfg config.KVStore) {

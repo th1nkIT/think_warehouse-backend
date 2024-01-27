@@ -3,7 +3,7 @@ package payload
 import (
 	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
+	"think_warehouse/common/httpservice"
 )
 
 type AuthorizationBackofficePayload struct {

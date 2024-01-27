@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
-	"github.com/wit-id/blueprint-backend-go/toolkit/web"
+	"think_warehouse/toolkit/log"
+	"think_warehouse/toolkit/web"
 
 	echo "github.com/labstack/echo/v4"
 	shortuuid "github.com/lithammer/shortuuid/v3"

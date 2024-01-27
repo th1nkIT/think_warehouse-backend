@@ -5,7 +5,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/db"
+	"think_warehouse/toolkit/db"
 
 	"github.com/go-redis/redis/v8"
 )

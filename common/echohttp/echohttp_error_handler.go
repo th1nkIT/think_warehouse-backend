@@ -3,8 +3,8 @@ package echohttp
 import (
 	"net/http"
 
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/toolkit/config"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"

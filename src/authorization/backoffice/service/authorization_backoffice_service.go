@@ -5,14 +5,14 @@ import (
 	"database/sql"
 
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/common/jwt"
-	"github.com/wit-id/blueprint-backend-go/common/utility"
-	"github.com/wit-id/blueprint-backend-go/src/repository/payload"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/common/jwt"
+	"think_warehouse/common/utility"
+	"think_warehouse/src/repository/payload"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/log"
 
-	userBackofficeService "github.com/wit-id/blueprint-backend-go/src/user_backoffice/service"
+	userBackofficeService "think_warehouse/src/user_backoffice/service"
 )
 
 func (s *AuthorizationBackofficeService) Login(ctx context.Context, request payload.AuthorizationBackofficePayload, jwtRequest jwt.RequestJWTToken) (userBackoffice sqlc.GetUserBackofficeByEmailRow, err error) {

@@ -3,8 +3,8 @@ package redis
 import (
 	"fmt"
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
-	"github.com/wit-id/blueprint-backend-go/toolkit/db"
+	"think_warehouse/toolkit/config"
+	"think_warehouse/toolkit/db"
 
 	"github.com/go-redis/redis/v8"
 )

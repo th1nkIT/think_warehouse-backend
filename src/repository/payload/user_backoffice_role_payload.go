@@ -8,10 +8,10 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/constants"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/constants"
+	"think_warehouse/common/httpservice"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/log"
 )
 
 type UserBackofficeRolePayload struct {

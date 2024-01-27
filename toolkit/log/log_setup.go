@@ -15,8 +15,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/errors"
-	kitconfig "github.com/wit-id/blueprint-backend-go/toolkit/config"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
+	kitconfig "think_warehouse/toolkit/config"
 )
 
 // NewDevLogger logger.

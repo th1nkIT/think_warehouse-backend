@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 
 	"github.com/labstack/echo/v4"
-	"github.com/wit-id/blueprint-backend-go/common/constants"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/constants"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/config"
+	"think_warehouse/toolkit/log"
 )
 
 // RoutesPayload ...
