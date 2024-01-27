@@ -32,6 +32,10 @@ func (s *ProductCategoryService) DeleteProductCategory(ctx context.Context, guid
 	}()
 
 	if err = q.DeleteProductCategory(ctx, sqlc.DeleteProductCategoryParams{
+		UpdatedBy: sql.NullString{
+			String: userData.Guid,
+			Valid:  true,
+		},
 		DeletedBy: sql.NullString{
 			String: userData.Guid,
 			Valid:  true,
