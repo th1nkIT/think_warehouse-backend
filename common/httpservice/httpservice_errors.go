@@ -23,9 +23,11 @@ var (
 	ErrUnauthorizedUser      = errors.New("unauthorized user")
 	ErrInActiveUser          = errors.New("user not active")
 
-	ErrProductNotFound         = errors.New("product not found")
-	ErrWarehouseNotFound       = errors.New("warehouse not found")
-	ErrProductCategoryNotFound = errors.New("product category not found")
+	ErrProductNotFound           = errors.New("product not found")
+	ErrWarehouseNotFound         = errors.New("warehouse not found")
+	ErrProductCategoryNotFound   = errors.New("product category not found")
+	ErrProductCategoryIsInactive = errors.New("product category is inactive, active first")
+	ErrProductCategoryFailed     = errors.New("failed update product category")
 
 	ErrRoleNotFound = errors.New("role not found")
 

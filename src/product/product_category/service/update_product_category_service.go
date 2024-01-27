@@ -31,6 +31,22 @@ func (s *ProductCategoryService) UpdateProductCategory(ctx context.Context, payl
 		}
 	}()
 
+	// Check if product category already deleted
+	productCategoryData, err := q.GetProductCategory(ctx, payload.Guid)
+	if err != nil {
+		log.FromCtx(ctx).Error(err, "failed get product category data")
+		err = errors.WithStack(httpservice.ErrProductCategoryNotFound)
+
+		return
+	}
+
+	if productCategoryData.DeletedAt.Valid {
+		log.FromCtx(ctx).Error(err, "product category already deleted")
+		err = errors.WithStack(httpservice.ErrProductCategoryIsInactive)
+
+		return
+	}
+
 	userBackoffice, err = q.GetUserBackoffice(ctx, payload.UpdatedBy.String)
 	if err != nil {
 		log.FromCtx(ctx).Error(err, "failed get user backoffice data")
@@ -42,7 +58,7 @@ func (s *ProductCategoryService) UpdateProductCategory(ctx context.Context, payl
 	productCategory, err = q.UpdateProductCategory(ctx, payload)
 	if err != nil {
 		log.FromCtx(ctx).Error(err, "failed update product category")
-		err = errors.WithStack(httpservice.ErrUnknownSource)
+		err = errors.WithStack(httpservice.ErrProductCategoryFailed)
 
 		return
 	}
