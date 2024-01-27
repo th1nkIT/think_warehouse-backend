@@ -8,7 +8,7 @@ COPY . .
 # Put the binary inside root path
 # cmd/bin used for manual build outside container only
 RUN go build -o main cmd/api/application.go
-EXPOSE 6969
+EXPOSE 4646
 
 # Let's rock :)
 CMD ["./main"]
