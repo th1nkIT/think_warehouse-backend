@@ -58,6 +58,8 @@ type readProductCategoryPayload struct {
 	CreatedBy readUserBackOfficePayload  `json:"created_by"`
 	UpdatedAt *time.Time                 `json:"updated_at"`
 	UpdatedBy *readUserBackOfficePayload `json:"updated_by"`
+	DeletedAt *time.Time                 `json:"deleted_at"`
+	DeletedBy *readUserBackOfficePayload `json:"deleted_by"`
 }
 
 func (payload *RegisterProductCategoryPayload) Validate() (err error) {
@@ -223,6 +225,17 @@ func ToPayloadProductCategory(productCategoryData sqlc.GetProductCategoryRow) (p
 		payload.Status = constants.StatusInactive
 	} else {
 		payload.Status = constants.StatusActive
+	}
+
+	if productCategoryData.DeletedAt.Valid {
+		payload.DeletedAt = &productCategoryData.DeletedAt.Time
+	}
+
+	if productCategoryData.DeletedBy.Valid {
+		payload.DeletedBy = &readUserBackOfficePayload{
+			GUID: productCategoryData.UserIDDelete.String,
+			Name: productCategoryData.UserNameDelete.String,
+		}
 	}
 
 	return

@@ -28,9 +28,9 @@ func AddRouteProductCategory(s *httpservice.Service, cfg config.KVStore, e *echo
 	product.POST("", listProductCategory(svc))
 	product.GET("/:guid", getProductCategory(svc))
 	product.POST("/create", createProductCategory(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
-	//product.PUT("/:guid", updateProductCategory(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
-	//product.DELETE("/:guid", deleteProductCategory(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
-	//product.GET("/reactive/:guid", reactiveProductCategory(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
+	product.PUT("/:guid", updateProductCategory(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
+	product.DELETE("/:guid", deleteProductCategory(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
+	product.GET("/reactive/:guid", reactiveProductCategory(svc), mddw.ValidateToken, mddw.ValidateUserBackofficeLogin)
 }
 
 func createProductCategory(svc *service.ProductCategoryService) echo.HandlerFunc {
@@ -55,6 +55,51 @@ func createProductCategory(svc *service.ProductCategoryService) echo.HandlerFunc
 	}
 }
 
+func updateProductCategory(svc *service.ProductCategoryService) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		guid := ctx.Param("guid")
+		if guid == "" {
+			return errors.Wrap(httpservice.ErrBadRequest, httpservice.MsgInvalidIDParam)
+		}
+
+		var request payload.UpdateProductCategoryPayload
+		if err := ctx.Bind(&request); err != nil {
+			log.FromCtx(ctx.Request().Context()).Error(err, "failed to parse request")
+			return errors.WithStack(httpservice.ErrBadRequest)
+		}
+
+		if err := request.Validate(); err != nil {
+			return err
+		}
+
+		userBackoffice := ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)
+		data, userBackoffice, err := svc.UpdateProductCategory(ctx.Request().Context(), request.ToEntity(userBackoffice, guid))
+		if err != nil {
+			return err
+		}
+
+		return httpservice.ResponseData(ctx, payload.ToPayloadUpdateProductCategory(data, userBackoffice), nil)
+	}
+}
+
+func deleteProductCategory(svc *service.ProductCategoryService) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		guid := ctx.Param("guid")
+		if guid == "" {
+			return errors.Wrap(httpservice.ErrBadRequest, httpservice.MsgInvalidIDParam)
+		}
+
+		userBackoffice := ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)
+		err := svc.DeleteProductCategory(ctx.Request().Context(), guid, userBackoffice)
+		if err != nil {
+			return err
+		}
+
+		return httpservice.ResponseData(ctx, nil, nil)
+
+	}
+}
+
 func getProductCategory(svc *service.ProductCategoryService) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		guid := ctx.Param("guid")
@@ -68,6 +113,23 @@ func getProductCategory(svc *service.ProductCategoryService) echo.HandlerFunc {
 		}
 
 		return httpservice.ResponseData(ctx, payload.ToPayloadProductCategory(data), nil)
+	}
+}
+
+func reactiveProductCategory(svc *service.ProductCategoryService) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		guid := ctx.Param("guid")
+		if guid == "" {
+			return errors.Wrap(httpservice.ErrBadRequest, httpservice.MsgInvalidIDParam)
+		}
+
+		userBackoffice := ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)
+		err := svc.ReactiveProductCategory(ctx.Request().Context(), guid, userBackoffice)
+		if err != nil {
+			return err
+		}
+
+		return httpservice.ResponseData(ctx, nil, nil)
 	}
 }
 

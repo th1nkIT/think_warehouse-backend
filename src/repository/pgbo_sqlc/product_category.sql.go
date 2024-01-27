@@ -14,20 +14,23 @@ import (
 const deleteProductCategory = `-- name: DeleteProductCategory :exec
 UPDATE product_category
 SET
+    updated_at = (now() at time zone 'UTC')::TIMESTAMP,
+    updated_by = $1,
     deleted_at = (now() at time zone 'UTC')::TIMESTAMP,
-    deleted_by = $1
+    deleted_by = $2
 WHERE
-    guid = $2
+    guid = $3
   AND deleted_at IS NULL
 `
 
 type DeleteProductCategoryParams struct {
+	UpdatedBy sql.NullString `json:"updated_by"`
 	DeletedBy sql.NullString `json:"deleted_by"`
 	Guid      string         `json:"guid"`
 }
 
 func (q *Queries) DeleteProductCategory(ctx context.Context, arg DeleteProductCategoryParams) error {
-	_, err := q.db.ExecContext(ctx, deleteProductCategory, arg.DeletedBy, arg.Guid)
+	_, err := q.db.ExecContext(ctx, deleteProductCategory, arg.UpdatedBy, arg.DeletedBy, arg.Guid)
 	return err
 }
 
@@ -69,11 +72,13 @@ SELECT
     pc.guid, pc.name, pc.created_at, pc.created_by,
     pc.updated_at, pc.updated_by, pc.deleted_at, pc.deleted_by,
     ub_created.name AS user_name, ub_created.guid AS user_id,
-    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update,
+    ub_deleted.name AS user_name_delete, ub_deleted.guid AS user_id_delete
 FROM
     product_category pc
         LEFT JOIN user_backoffice ub_created ON ub_created.guid = pc.created_by
         LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = pc.updated_by
+        LEFT JOIN user_backoffice ub_deleted ON ub_deleted.guid = pc.deleted_by
 WHERE
     pc.guid = $1
 `
@@ -91,6 +96,8 @@ type GetProductCategoryRow struct {
 	UserID         sql.NullString `json:"user_id"`
 	UserNameUpdate sql.NullString `json:"user_name_update"`
 	UserIDUpdate   sql.NullString `json:"user_id_update"`
+	UserNameDelete sql.NullString `json:"user_name_delete"`
+	UserIDDelete   sql.NullString `json:"user_id_delete"`
 }
 
 func (q *Queries) GetProductCategory(ctx context.Context, guid string) (GetProductCategoryRow, error) {
@@ -109,6 +116,8 @@ func (q *Queries) GetProductCategory(ctx context.Context, guid string) (GetProdu
 		&i.UserID,
 		&i.UserNameUpdate,
 		&i.UserIDUpdate,
+		&i.UserNameDelete,
+		&i.UserIDDelete,
 	)
 	return i, err
 }
@@ -149,11 +158,13 @@ SELECT
     pc.guid, pc.name, pc.created_at, pc.created_by,
     pc.updated_at, pc.updated_by, pc.deleted_at, pc.deleted_by,
     ub_created.name AS user_name, ub_created.guid AS user_id,
-    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update,
+    ub_deleted.name AS user_name_delete, ub_deleted.guid AS user_id_delete
 FROM
     product_category pc
         LEFT JOIN user_backoffice ub_created ON ub_created.guid = pc.created_by
         LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = pc.updated_by
+        LEFT JOIN user_backoffice ub_deleted ON ub_deleted.guid = pc.deleted_by
 WHERE
     (CASE WHEN $1::bool THEN LOWER(pc.name) LIKE LOWER ($2) ELSE TRUE END)
   AND (CASE WHEN $3::bool THEN
@@ -194,6 +205,8 @@ type ListProductCategoryRow struct {
 	UserID         sql.NullString `json:"user_id"`
 	UserNameUpdate sql.NullString `json:"user_name_update"`
 	UserIDUpdate   sql.NullString `json:"user_id_update"`
+	UserNameDelete sql.NullString `json:"user_name_delete"`
+	UserIDDelete   sql.NullString `json:"user_id_delete"`
 }
 
 func (q *Queries) ListProductCategory(ctx context.Context, arg ListProductCategoryParams) ([]ListProductCategoryRow, error) {
@@ -226,6 +239,8 @@ func (q *Queries) ListProductCategory(ctx context.Context, arg ListProductCatego
 			&i.UserID,
 			&i.UserNameUpdate,
 			&i.UserIDUpdate,
+			&i.UserNameDelete,
+			&i.UserIDDelete,
 		); err != nil {
 			return nil, err
 		}
