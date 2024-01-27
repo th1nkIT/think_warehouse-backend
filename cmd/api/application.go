@@ -3,11 +3,11 @@ package main
 import (
 	"time"
 
-	"github.com/wit-id/blueprint-backend-go/common/echohttp"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/toolkit/db/postgres"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
-	"github.com/wit-id/blueprint-backend-go/toolkit/runtimekit"
+	"think_warehouse/common/echohttp"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/toolkit/db/postgres"
+	"think_warehouse/toolkit/log"
+	"think_warehouse/toolkit/runtimekit"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"

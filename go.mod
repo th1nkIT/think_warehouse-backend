@@ -1,4 +1,4 @@
-module github.com/wit-id/blueprint-backend-go
+module think_warehouse
 
 go 1.17
 

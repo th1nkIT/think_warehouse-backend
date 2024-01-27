@@ -5,14 +5,14 @@ import (
 	"database/sql"
 
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/common/jwt"
-	"github.com/wit-id/blueprint-backend-go/common/utility"
-	"github.com/wit-id/blueprint-backend-go/src/repository/payload"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/common/jwt"
+	"think_warehouse/common/utility"
+	"think_warehouse/src/repository/payload"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/log"
 
-	userHandheldService "github.com/wit-id/blueprint-backend-go/src/user_handheld/service"
+	userHandheldService "think_warehouse/src/user_handheld/service"
 )
 
 func (s *AuthorizationHandheldService) Login(ctx context.Context, request payload.AuthorizationHandheldPayload, jwtRequest jwt.RequestJWTToken) (userHandheld sqlc.UserHandheld, err error) {

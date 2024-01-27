@@ -6,9 +6,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/grpckit/grpc_health_v1"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
-	"github.com/wit-id/blueprint-backend-go/toolkit/runtimekit"
+	"think_warehouse/toolkit/grpckit/grpc_health_v1"
+	"think_warehouse/toolkit/log"
+	"think_warehouse/toolkit/runtimekit"
 
 	"github.com/iancoleman/strcase"
 

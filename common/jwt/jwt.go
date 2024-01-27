@@ -3,8 +3,8 @@ package jwt
 import (
 	"time"
 
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/toolkit/config"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"

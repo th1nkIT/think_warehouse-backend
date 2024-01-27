@@ -5,13 +5,13 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/common/jwt"
-	"github.com/wit-id/blueprint-backend-go/src/authorization/handheld/service"
-	"github.com/wit-id/blueprint-backend-go/src/middleware"
-	"github.com/wit-id/blueprint-backend-go/src/repository/payload"
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/common/jwt"
+	"think_warehouse/src/authorization/handheld/service"
+	"think_warehouse/src/middleware"
+	"think_warehouse/src/repository/payload"
+	"think_warehouse/toolkit/config"
+	"think_warehouse/toolkit/log"
 )
 
 func AddRouteAuthorizationHandheld(s *httpservice.Service, cfg config.KVStore, e *echo.Echo) {

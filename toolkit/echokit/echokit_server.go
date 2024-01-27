@@ -13,9 +13,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
-	"github.com/wit-id/blueprint-backend-go/toolkit/runtimekit"
-	"github.com/wit-id/blueprint-backend-go/toolkit/web"
+	"think_warehouse/toolkit/log"
+	"think_warehouse/toolkit/runtimekit"
+	"think_warehouse/toolkit/web"
 
 	stdLog "log"
 

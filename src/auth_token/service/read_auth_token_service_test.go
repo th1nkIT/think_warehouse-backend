@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/wit-id/blueprint-backend-go/src/auth_token/service"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
+	"think_warehouse/src/auth_token/service"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/config"
 )
 
 func TestAuthTokenService_ReadAuthToken(t *testing.T) {

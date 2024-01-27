@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/log"
 )
 
 // ConfigRouteAccessResponse ...

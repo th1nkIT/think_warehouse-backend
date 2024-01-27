@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
-	"github.com/wit-id/blueprint-backend-go/src/auth_token/service"
+	"think_warehouse/src/auth_token/service"
 
-	"github.com/wit-id/blueprint-backend-go/src/repository/payload"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
+	"think_warehouse/src/repository/payload"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
 )
 
 func TestAuthTokenService_AuthToken(t *testing.T) {

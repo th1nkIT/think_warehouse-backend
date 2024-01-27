@@ -5,14 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/wit-id/blueprint-backend-go/common/utility"
+	"think_warehouse/common/utility"
 
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	"github.com/wit-id/blueprint-backend-go/common/jwt"
-	"github.com/wit-id/blueprint-backend-go/src/repository/payload"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/httpservice"
+	"think_warehouse/common/jwt"
+	"think_warehouse/src/repository/payload"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/log"
 )
 
 func (s *AuthTokenService) AuthToken(ctx context.Context, request payload.AuthTokenPayload) (authToken sqlc.AuthToken, err error) {

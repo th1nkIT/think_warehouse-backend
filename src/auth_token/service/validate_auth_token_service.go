@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
+	"think_warehouse/common/httpservice"
 
-	"github.com/wit-id/blueprint-backend-go/common/jwt"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/jwt"
+	"think_warehouse/toolkit/log"
 )
 
 func (s *AuthTokenService) ValidateAuthToken(ctx context.Context, token string) (claimsJwt jwt.RequestJWTToken, err error) {

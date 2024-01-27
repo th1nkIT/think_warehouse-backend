@@ -14,7 +14,7 @@ import (
 	"go.elastic.co/apm/module/apmsql"
 	_ "go.elastic.co/apm/module/apmsql/pq" // use wrapped postgres driver
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/db"
+	"think_warehouse/toolkit/db"
 )
 
 // NewPostgresDatabase - create & validate postgres connection given certain db.Option

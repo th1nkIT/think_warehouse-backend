@@ -3,7 +3,7 @@ package echokit
 import (
 	"fmt"
 
-	"github.com/wit-id/blueprint-backend-go/toolkit/config"
+	"think_warehouse/toolkit/config"
 )
 
 func NewRuntimeConfig(cfg config.KVStore, path string) *RuntimeConfig {

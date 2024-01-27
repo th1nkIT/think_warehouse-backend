@@ -5,9 +5,9 @@ import (
 	"database/sql"
 
 	"github.com/pkg/errors"
-	"github.com/wit-id/blueprint-backend-go/common/httpservice"
-	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
-	"github.com/wit-id/blueprint-backend-go/toolkit/log"
+	"think_warehouse/common/httpservice"
+	sqlc "think_warehouse/src/repository/pgbo_sqlc"
+	"think_warehouse/toolkit/log"
 )
 
 func (s *UserHandheldService) DeleteUserHandheld(ctx context.Context, guid string) (err error) {
