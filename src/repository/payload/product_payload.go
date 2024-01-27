@@ -121,7 +121,7 @@ func (payload *RegisterProductPayload) ToEntity(userData sqlc.GetUserBackofficeR
 	return
 }
 
-func (payload *UpdateProductPayload) ToEntity(productData sqlc.GetUserBackofficeRow, guid string) (data sqlc.UpdateProductParams) {
+func (payload *UpdateProductPayload) ToEntity(userData sqlc.GetUserBackofficeRow, guid string) (data sqlc.UpdateProductParams) {
 	data = sqlc.UpdateProductParams{
 		Guid: guid,
 		Name: sql.NullString{
@@ -133,7 +133,7 @@ func (payload *UpdateProductPayload) ToEntity(productData sqlc.GetUserBackoffice
 			Valid:  true,
 		},
 		Description: payload.Description,
-		UpdatedBy:   sql.NullString{String: productData.Guid, Valid: true},
+		UpdatedBy:   sql.NullString{String: userData.Guid, Valid: true},
 	}
 
 	return
