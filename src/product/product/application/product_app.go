@@ -6,7 +6,7 @@ import (
 	"github.com/wit-id/blueprint-backend-go/common/constants"
 	"github.com/wit-id/blueprint-backend-go/common/httpservice"
 	"github.com/wit-id/blueprint-backend-go/src/middleware"
-	"github.com/wit-id/blueprint-backend-go/src/product/service"
+	"github.com/wit-id/blueprint-backend-go/src/product/product/service"
 	"github.com/wit-id/blueprint-backend-go/src/repository/payload"
 	sqlc "github.com/wit-id/blueprint-backend-go/src/repository/pgbo_sqlc"
 	"github.com/wit-id/blueprint-backend-go/toolkit/config"

@@ -2,6 +2,8 @@ package echohttp
 
 import (
 	"context"
+	productHandledApp "github.com/wit-id/blueprint-backend-go/src/product/product/application"
+	productCategoryHandledApp "github.com/wit-id/blueprint-backend-go/src/product/product_category/application"
 	"net/http"
 
 	"github.com/wit-id/blueprint-backend-go/common/constants"
@@ -21,7 +23,6 @@ import (
 
 	userHandheldApp "github.com/wit-id/blueprint-backend-go/src/user_handheld/application"
 
-	productHandledApp "github.com/wit-id/blueprint-backend-go/src/product/application"
 	warehouseHandledApp "github.com/wit-id/blueprint-backend-go/src/warehouse/application"
 )
 
@@ -54,6 +55,8 @@ func RunEchoHTTPService(ctx context.Context, s *httpservice.Service, cfg config.
 
 	// Product
 	productHandledApp.AddRouteProduct(s, cfg, e)
+	// Product Category
+	productCategoryHandledApp.AddRouteProductCategory(s, cfg, e)
 
 	// Warehouse
 	warehouseHandledApp.AddRouteWarehouse(s, cfg, e)

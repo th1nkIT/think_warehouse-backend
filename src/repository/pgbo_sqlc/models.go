@@ -72,6 +72,18 @@ type Product struct {
 	DeletedBy         sql.NullString `json:"deleted_by"`
 }
 
+type ProductCategory struct {
+	ID        int64          `json:"id"`
+	Guid      string         `json:"guid"`
+	Name      string         `json:"name"`
+	CreatedAt time.Time      `json:"created_at"`
+	CreatedBy string         `json:"created_by"`
+	UpdatedAt sql.NullTime   `json:"updated_at"`
+	UpdatedBy sql.NullString `json:"updated_by"`
+	DeletedAt sql.NullTime   `json:"deleted_at"`
+	DeletedBy sql.NullString `json:"deleted_by"`
+}
+
 type ProductsHistory struct {
 	ID            int64          `json:"id"`
 	Guid          string         `json:"guid"`
