@@ -51,21 +51,25 @@ func (q *Queries) GetCountProductList(ctx context.Context, arg GetCountProductLi
 
 const getProduct = `-- name: GetProduct :one
 SELECT
-    p.guid, p.name, p.product_picture_url, p.description, p.created_at, p.created_by,
+    p.guid, p.category_id, p.name, p.product_code, p.product_picture_url, p.description, p.created_at, p.created_by,
     p.updated_at, p.updated_by, p.deleted_at, p.deleted_by,
     ub_created.name AS user_name, ub_created.guid AS user_id,
-    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update,
+    pc.name AS category_name
 FROM
     product p
         LEFT JOIN user_backoffice ub_created ON ub_created.guid = p.created_by
         LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
+        LEFT JOIN product_category pc ON pc.guid = p.category_id
 WHERE
     p.guid = $1
 `
 
 type GetProductRow struct {
 	Guid              string         `json:"guid"`
+	CategoryID        string         `json:"category_id"`
 	Name              sql.NullString `json:"name"`
+	ProductCode       string         `json:"product_code"`
 	ProductPictureUrl sql.NullString `json:"product_picture_url"`
 	Description       string         `json:"description"`
 	CreatedAt         time.Time      `json:"created_at"`
@@ -78,6 +82,7 @@ type GetProductRow struct {
 	UserID            sql.NullString `json:"user_id"`
 	UserNameUpdate    sql.NullString `json:"user_name_update"`
 	UserIDUpdate      sql.NullString `json:"user_id_update"`
+	CategoryName      sql.NullString `json:"category_name"`
 }
 
 func (q *Queries) GetProduct(ctx context.Context, guid string) (GetProductRow, error) {
@@ -85,7 +90,9 @@ func (q *Queries) GetProduct(ctx context.Context, guid string) (GetProductRow, e
 	var i GetProductRow
 	err := row.Scan(
 		&i.Guid,
+		&i.CategoryID,
 		&i.Name,
+		&i.ProductCode,
 		&i.ProductPictureUrl,
 		&i.Description,
 		&i.CreatedAt,
@@ -98,21 +105,24 @@ func (q *Queries) GetProduct(ctx context.Context, guid string) (GetProductRow, e
 		&i.UserID,
 		&i.UserNameUpdate,
 		&i.UserIDUpdate,
+		&i.CategoryName,
 	)
 	return i, err
 }
 
 const insertProduct = `-- name: InsertProduct :one
 INSERT INTO product 
-        (guid, name, product_picture_url, description, created_at, created_by)
+        (guid, category_id, name, product_code, product_picture_url, description, created_at, created_by)
     VALUES
-        ($1, $2, $3, $4, (now() at time zone 'UTC')::TIMESTAMP, $5)
-RETURNING product.id, product.guid, product.name, product.product_picture_url, product.description, product.created_at, product.created_by, product.updated_at, product.updated_by, product.deleted_at, product.deleted_by
+        ($1, $2, $3, $4, $5, $6, (now() at time zone 'UTC')::TIMESTAMP, $7)
+RETURNING product.id, product.guid, product.name, product.product_picture_url, product.description, product.created_at, product.created_by, product.updated_at, product.updated_by, product.deleted_at, product.deleted_by, product.product_code, product.category_id
 `
 
 type InsertProductParams struct {
 	Guid              string         `json:"guid"`
+	CategoryID        string         `json:"category_id"`
 	Name              sql.NullString `json:"name"`
+	ProductCode       string         `json:"product_code"`
 	ProductPictureUrl sql.NullString `json:"product_picture_url"`
 	Description       string         `json:"description"`
 	CreatedBy         string         `json:"created_by"`
@@ -121,7 +131,9 @@ type InsertProductParams struct {
 func (q *Queries) InsertProduct(ctx context.Context, arg InsertProductParams) (Product, error) {
 	row := q.db.QueryRowContext(ctx, insertProduct,
 		arg.Guid,
+		arg.CategoryID,
 		arg.Name,
+		arg.ProductCode,
 		arg.ProductPictureUrl,
 		arg.Description,
 		arg.CreatedBy,
@@ -139,44 +151,53 @@ func (q *Queries) InsertProduct(ctx context.Context, arg InsertProductParams) (P
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
+		&i.ProductCode,
+		&i.CategoryID,
 	)
 	return i, err
 }
 
 const listProduct = `-- name: ListProduct :many
 SELECT
-    p.guid, p.name, p.product_picture_url, p.description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by,
+    p.guid, p.category_id, p.name, p.product_code, p.product_picture_url, p.description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by,
     ub_created.name AS user_name, ub_created.guid AS user_id,
-    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update
+    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update,
+    pc.name AS category_name
 FROM
     product p
+        LEFT JOIN product_category pc ON pc.guid = p.category_id
         LEFT JOIN user_backoffice ub_created ON ub_created.guid = p.created_by
         LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
 WHERE
     (CASE WHEN $1::bool THEN LOWER(p.name) LIKE LOWER($2) ELSE TRUE END)
+AND (CASE WHEN $3::bool THEN LOWER(p.product_code) LIKE LOWER($4) ELSE TRUE END)
 ORDER BY
-    (CASE WHEN $3 = 'id ASC' THEN p.guid END) ASC,
-    (CASE WHEN $3 = 'id DESC' THEN p.guid END) DESC,
-    (CASE WHEN $3 = 'name ASC' THEN p.name END) ASC,
-    (CASE WHEN $3 = 'name DESC' THEN p.name END) DESC,
-    (CASE WHEN $3 = 'created_at ASC' THEN p.created_at END) ASC,
-    (CASE WHEN $3 = 'created_at DESC' THEN p.created_at END) DESC,
+    (CASE WHEN $5 = 'id ASC' THEN p.guid END) ASC,
+    (CASE WHEN $5 = 'id DESC' THEN p.guid END) DESC,
+    (CASE WHEN $5 = 'name ASC' THEN p.name END) ASC,
+    (CASE WHEN $5 = 'name DESC' THEN p.name END) DESC,
+    (CASE WHEN $5 = 'created_at ASC' THEN p.created_at END) ASC,
+    (CASE WHEN $5 = 'created_at DESC' THEN p.created_at END) DESC,
     p.created_at DESC
-    LIMIT $5
-OFFSET $4
+    LIMIT $7
+OFFSET $6
 `
 
 type ListProductParams struct {
-	SetName    bool        `json:"set_name"`
-	Name       string      `json:"name"`
-	OrderParam interface{} `json:"order_param"`
-	OffsetPage int32       `json:"offset_page"`
-	LimitData  int32       `json:"limit_data"`
+	SetName        bool        `json:"set_name"`
+	Name           string      `json:"name"`
+	SetProductCode bool        `json:"set_product_code"`
+	ProductCode    string      `json:"product_code"`
+	OrderParam     interface{} `json:"order_param"`
+	OffsetPage     int32       `json:"offset_page"`
+	LimitData      int32       `json:"limit_data"`
 }
 
 type ListProductRow struct {
 	Guid              string         `json:"guid"`
+	CategoryID        string         `json:"category_id"`
 	Name              sql.NullString `json:"name"`
+	ProductCode       string         `json:"product_code"`
 	ProductPictureUrl sql.NullString `json:"product_picture_url"`
 	Description       string         `json:"description"`
 	CreatedAt         time.Time      `json:"created_at"`
@@ -189,12 +210,15 @@ type ListProductRow struct {
 	UserID            sql.NullString `json:"user_id"`
 	UserNameUpdate    sql.NullString `json:"user_name_update"`
 	UserIDUpdate      sql.NullString `json:"user_id_update"`
+	CategoryName      sql.NullString `json:"category_name"`
 }
 
 func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]ListProductRow, error) {
 	rows, err := q.db.QueryContext(ctx, listProduct,
 		arg.SetName,
 		arg.Name,
+		arg.SetProductCode,
+		arg.ProductCode,
 		arg.OrderParam,
 		arg.OffsetPage,
 		arg.LimitData,
@@ -208,7 +232,9 @@ func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]Lis
 		var i ListProductRow
 		if err := rows.Scan(
 			&i.Guid,
+			&i.CategoryID,
 			&i.Name,
+			&i.ProductCode,
 			&i.ProductPictureUrl,
 			&i.Description,
 			&i.CreatedAt,
@@ -221,6 +247,7 @@ func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]Lis
 			&i.UserID,
 			&i.UserNameUpdate,
 			&i.UserIDUpdate,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
@@ -260,16 +287,18 @@ func (q *Queries) ReactiveProduct(ctx context.Context, arg ReactiveProductParams
 const updateProduct = `-- name: UpdateProduct :one
 UPDATE product 
 SET name = $1,
-    product_picture_url = $2,
-    description = $3,
-    updated_by = $4,
+    category_id = $2,
+    product_picture_url = $3,
+    description = $4,
+    updated_by = $5,
     updated_at = (now() at time zone 'UTC')::TIMESTAMP 
-WHERE guid = $5
-RETURNING product.id, product.guid, product.name, product.product_picture_url, product.description, product.created_at, product.created_by, product.updated_at, product.updated_by, product.deleted_at, product.deleted_by
+WHERE guid = $6
+RETURNING product.id, product.guid, product.name, product.product_picture_url, product.description, product.created_at, product.created_by, product.updated_at, product.updated_by, product.deleted_at, product.deleted_by, product.product_code, product.category_id
 `
 
 type UpdateProductParams struct {
 	Name              sql.NullString `json:"name"`
+	CategoryID        string         `json:"category_id"`
 	ProductPictureUrl sql.NullString `json:"product_picture_url"`
 	Description       string         `json:"description"`
 	UpdatedBy         sql.NullString `json:"updated_by"`
@@ -279,6 +308,7 @@ type UpdateProductParams struct {
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
 	row := q.db.QueryRowContext(ctx, updateProduct,
 		arg.Name,
+		arg.CategoryID,
 		arg.ProductPictureUrl,
 		arg.Description,
 		arg.UpdatedBy,
@@ -297,6 +327,8 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
+		&i.ProductCode,
+		&i.CategoryID,
 	)
 	return i, err
 }
