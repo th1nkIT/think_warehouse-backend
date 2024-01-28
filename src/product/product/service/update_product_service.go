@@ -9,7 +9,7 @@ import (
 	"think_warehouse/toolkit/log"
 )
 
-func (s *ProductService) UpdateProduct(ctx context.Context, request sqlc.UpdateProductParams) (product sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow, err error) {
+func (s *ProductService) UpdateProduct(ctx context.Context, request sqlc.UpdateProductParams) (product sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow, productCategoryData sqlc.GetProductCategoryRow, err error) {
 	tx, err := s.mainDB.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		log.FromCtx(ctx).Error(err, "failed begin tx")
@@ -35,6 +35,14 @@ func (s *ProductService) UpdateProduct(ctx context.Context, request sqlc.UpdateP
 	if err != nil {
 		log.FromCtx(ctx).Error(err, "failed get user backoffice data")
 		err = errors.WithStack(httpservice.ErrUserNotFound)
+
+		return
+	}
+
+	productCategoryData, err = q.GetProductCategory(ctx, request.CategoryID)
+	if err != nil {
+		log.FromCtx(ctx).Error(err, "failed get product category data")
+		err = errors.WithStack(httpservice.ErrProductCategoryNotFound)
 
 		return
 	}

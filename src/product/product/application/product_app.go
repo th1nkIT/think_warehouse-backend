@@ -46,12 +46,12 @@ func createProduct(svc *service.ProductService) echo.HandlerFunc {
 			return err
 		}
 
-		data, userBackoffice, err := svc.CreateProduct(ctx.Request().Context(), request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)))
+		data, userBackoffice, productCategory, err := svc.CreateProduct(ctx.Request().Context(), request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)))
 		if err != nil {
 			return err
 		}
 
-		return httpservice.ResponseData(ctx, payload.ToPayloadRegisterProduct(data, userBackoffice), nil)
+		return httpservice.ResponseData(ctx, payload.ToPayloadRegisterProduct(data, userBackoffice, productCategory), nil)
 	}
 }
 
@@ -73,12 +73,12 @@ func updateProduct(svc *service.ProductService) echo.HandlerFunc {
 			return err
 		}
 
-		data, userBackoffice, err := svc.UpdateProduct(ctx.Request().Context(), request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow), guid))
+		data, userBackoffice, productCategoryData, err := svc.UpdateProduct(ctx.Request().Context(), request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow), guid))
 		if err != nil {
 			return err
 		}
 
-		return httpservice.ResponseData(ctx, payload.ToPayloadUpdateProduct(data, userBackoffice), nil)
+		return httpservice.ResponseData(ctx, payload.ToPayloadUpdateProduct(data, userBackoffice, productCategoryData), nil)
 	}
 }
 

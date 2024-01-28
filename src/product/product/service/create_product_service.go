@@ -9,7 +9,7 @@ import (
 	"think_warehouse/toolkit/log"
 )
 
-func (s *ProductService) CreateProduct(ctx context.Context, request sqlc.InsertProductParams) (product sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow, err error) {
+func (s *ProductService) CreateProduct(ctx context.Context, request sqlc.InsertProductParams) (product sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow, categoryData sqlc.GetProductCategoryRow, err error) {
 	tx, err := s.mainDB.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		log.FromCtx(ctx).Error(err, "failed begin tx")
@@ -34,6 +34,14 @@ func (s *ProductService) CreateProduct(ctx context.Context, request sqlc.InsertP
 	userBackoffice, err = q.GetUserBackoffice(ctx, request.CreatedBy)
 	if err != nil {
 		log.FromCtx(ctx).Error(err, "failed get user backoffice by guid")
+		err = errors.WithStack(httpservice.ErrUnknownSource)
+
+		return
+	}
+
+	categoryData, err = q.GetProductCategory(ctx, request.CategoryID)
+	if err != nil {
+		log.FromCtx(ctx).Error(err, "failed get product category by guid")
 		err = errors.WithStack(httpservice.ErrUnknownSource)
 
 		return

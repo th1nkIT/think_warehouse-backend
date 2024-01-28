@@ -70,6 +70,8 @@ type Product struct {
 	UpdatedBy         sql.NullString `json:"updated_by"`
 	DeletedAt         sql.NullTime   `json:"deleted_at"`
 	DeletedBy         sql.NullString `json:"deleted_by"`
+	ProductCode       string         `json:"product_code"`
+	CategoryID        string         `json:"category_id"`
 }
 
 type ProductCategory struct {

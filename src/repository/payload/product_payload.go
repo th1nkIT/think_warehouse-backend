@@ -13,12 +13,15 @@ import (
 
 type RegisterProductPayload struct {
 	Name              string `json:"name" valid:"required"`
+	ProductCode       string `json:"product_code" valid:"required"`
+	CategoryId        string `json:"category_id" valid:"required"`
 	ProductPictureUrl string `json:"profile_picture_url"`
 	Description       string `json:"description"`
 }
 
 type UpdateProductPayload struct {
 	Name              string `json:"name" valid:"required"`
+	CategoryId        string `json:"category_id" valid:"required"`
 	ProductPictureUrl string `json:"profile_picture_url"`
 	Description       string `json:"description"`
 }
@@ -32,15 +35,20 @@ type ListProductPayload struct {
 }
 
 type ListProductFilterPayload struct {
-	SetName bool   `json:"set_name"`
-	Name    string `json:"name"`
+	SetName        bool   `json:"set_name"`
+	Name           string `json:"name"`
+	SetProductCode bool   `json:"set_product_code"`
+	ProductCode    string `json:"product_code"`
 }
 
 type readRegisterProductPayload struct {
 	GUID              string                    `json:"id"`
 	Name              string                    `json:"name"`
+	ProductCode       string                    `json:"product_code"`
 	ProductPictureUrl *string                   `json:"profile_picture_image_url"`
 	Description       string                    `json:"description"`
+	CategoryId        string                    `json:"category_id"`
+	Category          readProductCategoryData   `json:"category"`
 	Status            string                    `json:"status"`
 	CreatedAt         time.Time                 `json:"created_at"`
 	CreatedBy         readUserBackOfficePayload `json:"created_by"`
@@ -51,12 +59,20 @@ type readUserBackOfficePayload struct {
 	Name string `json:"name"`
 }
 
+type readProductCategoryData struct {
+	GUID string `json:"id"`
+	Name string `json:"name"`
+}
+
 type readUpdateProductPayload struct {
 	GUID              string                    `json:"id"`
 	Name              string                    `json:"name"`
+	ProductCode       string                    `json:"product_code"`
 	ProductPictureUrl *string                   `json:"profile_picture_image_url"`
 	Description       string                    `json:"description"`
 	Status            string                    `json:"status"`
+	CategoryId        string                    `json:"category_id"`
+	Category          readProductCategoryData   `json:"category"`
 	UpdatedAt         time.Time                 `json:"updated_at"`
 	UpdatedBy         readUserBackOfficePayload `json:"updated_by"`
 }
@@ -64,9 +80,12 @@ type readUpdateProductPayload struct {
 type readProductPayload struct {
 	GUID              string                     `json:"id"`
 	Name              string                     `json:"name"`
+	ProductCode       string                     `json:"product_code"`
 	ProductPictureUrl *string                    `json:"profile_picture_image_url"`
 	Description       string                     `json:"description"`
 	Status            string                     `json:"status"`
+	CategoryId        string                     `json:"category_id"`
+	Category          readProductCategoryData    `json:"category"`
 	CreatedAt         time.Time                  `json:"created_at"`
 	CreatedBy         readUserBackOfficePayload  `json:"created_by"`
 	UpdatedAt         *time.Time                 `json:"updated_at"`
@@ -110,6 +129,8 @@ func (payload *RegisterProductPayload) ToEntity(userData sqlc.GetUserBackofficeR
 			String: payload.Name,
 			Valid:  true,
 		},
+		ProductCode: payload.ProductCode,
+		CategoryID:  payload.CategoryId,
 		ProductPictureUrl: sql.NullString{
 			String: payload.ProductPictureUrl,
 			Valid:  true,
@@ -128,6 +149,7 @@ func (payload *UpdateProductPayload) ToEntity(userData sqlc.GetUserBackofficeRow
 			String: payload.Name,
 			Valid:  true,
 		},
+		CategoryID: payload.CategoryId,
 		ProductPictureUrl: sql.NullString{
 			String: payload.ProductPictureUrl,
 			Valid:  true,
@@ -143,9 +165,11 @@ func (payload *ListProductPayload) ToEntity() (data sqlc.ListProductParams) {
 	orderParam := constants.DefaultOrderValue
 
 	data = sqlc.ListProductParams{
-		SetName:   payload.Filter.SetName,
-		Name:      "%" + payload.Filter.Name + "%",
-		LimitData: payload.Limit,
+		SetName:        payload.Filter.SetName,
+		Name:           "%" + payload.Filter.Name + "%",
+		SetProductCode: payload.Filter.SetProductCode,
+		ProductCode:    "%" + payload.Filter.ProductCode + "%",
+		LimitData:      payload.Limit,
 	}
 
 	if payload.Limit == 0 {
@@ -171,10 +195,17 @@ func (payload *ListProductPayload) ToEntity() (data sqlc.ListProductParams) {
 	return
 }
 
-func ToPayloadRegisterProduct(productData sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow) (payload readRegisterProductPayload) {
+func ToPayloadRegisterProduct(productData sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow, categoryData sqlc.GetProductCategoryRow) (payload readRegisterProductPayload) {
 	payload = readRegisterProductPayload{
 		GUID:        productData.Guid,
 		Name:        productData.Name.String,
+		ProductCode: productData.ProductCode,
+		CategoryId:  productData.CategoryID,
+		Category: readProductCategoryData{
+			GUID: categoryData.Guid,
+			Name: categoryData.Name,
+		},
+		Status:      constants.StatusActive,
 		Description: productData.Description,
 		CreatedAt:   productData.CreatedAt,
 		CreatedBy: readUserBackOfficePayload{
@@ -193,12 +224,18 @@ func ToPayloadRegisterProduct(productData sqlc.Product, userBackoffice sqlc.GetU
 	return
 }
 
-func ToPayloadUpdateProduct(productData sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow) (payload readUpdateProductPayload) {
+func ToPayloadUpdateProduct(productData sqlc.Product, userBackoffice sqlc.GetUserBackofficeRow, categoryData sqlc.GetProductCategoryRow) (payload readUpdateProductPayload) {
 	payload = readUpdateProductPayload{
 		GUID:        productData.Guid,
 		Name:        productData.Name.String,
+		ProductCode: productData.ProductCode,
 		Description: productData.Description,
-		UpdatedAt:   productData.UpdatedAt.Time,
+		CategoryId:  productData.CategoryID,
+		Category: readProductCategoryData{
+			GUID: categoryData.Guid,
+			Name: categoryData.Name,
+		},
+		UpdatedAt: productData.UpdatedAt.Time,
 		UpdatedBy: readUserBackOfficePayload{
 			GUID: userBackoffice.Guid,
 		},
@@ -225,8 +262,14 @@ func ToPayloadProduct(productData sqlc.GetProductRow) (payload readProductPayloa
 	payload = readProductPayload{
 		GUID:        productData.Guid,
 		Name:        productData.Name.String,
+		ProductCode: productData.ProductCode,
 		Description: productData.Description,
-		CreatedAt:   productData.CreatedAt,
+		CategoryId:  productData.CategoryID,
+		Category: readProductCategoryData{
+			GUID: productData.CategoryID,
+			Name: productData.CategoryName.String,
+		},
+		CreatedAt: productData.CreatedAt,
 		CreatedBy: readUserBackOfficePayload{
 			GUID: productData.UserID.String,
 		},
