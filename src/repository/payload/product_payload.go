@@ -2,6 +2,7 @@ package payload
 
 import (
 	"database/sql"
+	"encoding/json"
 	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
 	"think_warehouse/common/constants"
@@ -14,6 +15,8 @@ import (
 type RegisterProductPayload struct {
 	Name              string `json:"name" valid:"required"`
 	ProductCode       string `json:"product_code" valid:"required"`
+	ProductSKU        string `json:"product_sku"`
+	IsVariant         bool   `json:"is_variant"`
 	CategoryId        string `json:"category_id" valid:"required"`
 	ProductPictureUrl string `json:"profile_picture_url"`
 	Description       string `json:"description"`
@@ -22,6 +25,8 @@ type RegisterProductPayload struct {
 type UpdateProductPayload struct {
 	Name              string `json:"name" valid:"required"`
 	CategoryId        string `json:"category_id" valid:"required"`
+	ProductSKU        string `json:"product_sku"`
+	IsVariant         bool   `json:"is_variant"`
 	ProductPictureUrl string `json:"profile_picture_url"`
 	Description       string `json:"description"`
 }
@@ -35,10 +40,20 @@ type ListProductPayload struct {
 }
 
 type ListProductFilterPayload struct {
-	SetName        bool   `json:"set_name"`
-	Name           string `json:"name"`
-	SetProductCode bool   `json:"set_product_code"`
-	ProductCode    string `json:"product_code"`
+	SetIsVariant         bool   `json:"set_is_variant"`
+	IsVariant            bool   `json:"is_variant"`
+	SetProductCategoryID bool   `json:"set_product_category_id"`
+	ProductCategoryID    string `json:"product_category_id"`
+	SetName              bool   `json:"set_name"`
+	Name                 string `json:"name"`
+	SetProductCode       bool   `json:"set_product_code"`
+	ProductCode          string `json:"product_code"`
+	SetDescription       bool   `json:"set_description"`
+	Description          string `json:"description"`
+	SetSku               bool   `json:"set_sku"`
+	Sku                  string `json:"sku"`
+	SetIsActive          bool   `json:"set_is_active"`
+	IsActive             bool   `json:"is_active"`
 }
 
 type readRegisterProductPayload struct {
@@ -49,6 +64,8 @@ type readRegisterProductPayload struct {
 	Description       string                    `json:"description"`
 	CategoryId        string                    `json:"category_id"`
 	Category          readProductCategoryData   `json:"category"`
+	ProductSKU        string                    `json:"product_sku"`
+	IsVariant         bool                      `json:"is_variant"`
 	Status            string                    `json:"status"`
 	CreatedAt         time.Time                 `json:"created_at"`
 	CreatedBy         readUserBackOfficePayload `json:"created_by"`
@@ -73,14 +90,36 @@ type readUpdateProductPayload struct {
 	Status            string                    `json:"status"`
 	CategoryId        string                    `json:"category_id"`
 	Category          readProductCategoryData   `json:"category"`
+	ProductSKU        string                    `json:"product_sku"`
+	IsVariant         bool                      `json:"is_variant"`
 	UpdatedAt         time.Time                 `json:"updated_at"`
 	UpdatedBy         readUserBackOfficePayload `json:"updated_by"`
+}
+
+type readProduct struct {
+	GUID              string                     `json:"id"`
+	Name              string                     `json:"name"`
+	ProductCode       string                     `json:"product_code"`
+	ProductSKU        string                     `json:"product_sku"`
+	IsVariant         bool                       `json:"is_variant"`
+	ProductPictureUrl *string                    `json:"profile_picture_image_url"`
+	Description       string                     `json:"description"`
+	Status            string                     `json:"status"`
+	CategoryId        string                     `json:"category_id"`
+	Category          readProductCategoryData    `json:"category"`
+	CreatedAt         time.Time                  `json:"created_at"`
+	CreatedBy         readUserBackOfficePayload  `json:"created_by"`
+	UpdatedAt         *time.Time                 `json:"updated_at"`
+	UpdatedBy         *readUserBackOfficePayload `json:"updated_by"`
+	ProductVariant    json.RawMessage            `json:"product_variant"`
 }
 
 type readProductPayload struct {
 	GUID              string                     `json:"id"`
 	Name              string                     `json:"name"`
 	ProductCode       string                     `json:"product_code"`
+	ProductSKU        string                     `json:"product_sku"`
+	IsVariant         bool                       `json:"is_variant"`
 	ProductPictureUrl *string                    `json:"profile_picture_image_url"`
 	Description       string                     `json:"description"`
 	Status            string                     `json:"status"`
@@ -129,6 +168,8 @@ func (payload *RegisterProductPayload) ToEntity(userData sqlc.GetUserBackofficeR
 			String: payload.Name,
 			Valid:  true,
 		},
+		ProductSku:  payload.ProductSKU,
+		IsVariant:   payload.IsVariant,
 		ProductCode: payload.ProductCode,
 		CategoryID:  payload.CategoryId,
 		ProductPictureUrl: sql.NullString{
@@ -149,6 +190,8 @@ func (payload *UpdateProductPayload) ToEntity(userData sqlc.GetUserBackofficeRow
 			String: payload.Name,
 			Valid:  true,
 		},
+		ProductSku: payload.ProductSKU,
+		IsVariant:  payload.IsVariant,
 		CategoryID: payload.CategoryId,
 		ProductPictureUrl: sql.NullString{
 			String: payload.ProductPictureUrl,
@@ -165,11 +208,19 @@ func (payload *ListProductPayload) ToEntity() (data sqlc.ListProductParams) {
 	orderParam := constants.DefaultOrderValue
 
 	data = sqlc.ListProductParams{
-		SetName:        payload.Filter.SetName,
-		Name:           "%" + payload.Filter.Name + "%",
-		SetProductCode: payload.Filter.SetProductCode,
-		ProductCode:    "%" + payload.Filter.ProductCode + "%",
-		LimitData:      payload.Limit,
+		SetName:              payload.Filter.SetName,
+		Name:                 "%" + payload.Filter.Name + "%",
+		SetIsVariant:         payload.Filter.SetIsVariant,
+		IsVariant:            payload.Filter.IsVariant,
+		SetProductCategoryID: payload.Filter.SetProductCategoryID,
+		ProductCategoryID:    payload.Filter.ProductCategoryID,
+		SetDescription:       payload.Filter.SetDescription,
+		Description:          "%" + payload.Filter.Description + "%",
+		SetSku:               payload.Filter.SetSku,
+		Sku:                  "%" + payload.Filter.Sku + "%",
+		SetProductCode:       payload.Filter.SetProductCode,
+		ProductCode:          "%" + payload.Filter.ProductCode + "%",
+		LimitData:            payload.Limit,
 	}
 
 	if payload.Limit == 0 {
@@ -200,6 +251,8 @@ func ToPayloadRegisterProduct(productData sqlc.Product, userBackoffice sqlc.GetU
 		GUID:        productData.Guid,
 		Name:        productData.Name.String,
 		ProductCode: productData.ProductCode,
+		ProductSKU:  productData.ProductSku,
+		IsVariant:   productData.IsVariant,
 		CategoryId:  productData.CategoryID,
 		Category: readProductCategoryData{
 			GUID: categoryData.Guid,
@@ -229,6 +282,8 @@ func ToPayloadUpdateProduct(productData sqlc.Product, userBackoffice sqlc.GetUse
 		GUID:        productData.Guid,
 		Name:        productData.Name.String,
 		ProductCode: productData.ProductCode,
+		ProductSKU:  productData.ProductSku,
+		IsVariant:   productData.IsVariant,
 		Description: productData.Description,
 		CategoryId:  productData.CategoryID,
 		Category: readProductCategoryData{
@@ -258,29 +313,33 @@ func ToPayloadUpdateProduct(productData sqlc.Product, userBackoffice sqlc.GetUse
 	return
 }
 
-func ToPayloadProduct(productData sqlc.GetProductRow) (payload readProductPayload) {
-	payload = readProductPayload{
+// Todo: Add ToPayloadProductVariant and NoVariant
+
+func ToPayloadProduct(productData sqlc.GetProductRow) (payload readProduct) {
+	payload = readProduct{
 		GUID:        productData.Guid,
 		Name:        productData.Name.String,
 		ProductCode: productData.ProductCode,
+		IsVariant:   productData.IsVariant,
+		ProductSKU:  productData.ProductSku,
 		Description: productData.Description,
 		CategoryId:  productData.CategoryID,
 		Category: readProductCategoryData{
 			GUID: productData.CategoryID,
-			Name: productData.CategoryName.String,
+			Name: productData.ProductCategoryName.String,
 		},
 		CreatedAt: productData.CreatedAt,
 		CreatedBy: readUserBackOfficePayload{
-			GUID: productData.UserID.String,
+			GUID: productData.CreatedByGuid.String,
 		},
 	}
 
-	if productData.UserID.Valid {
-		payload.CreatedBy.GUID = productData.UserID.String
+	if productData.CreatedByGuid.Valid {
+		payload.CreatedBy.GUID = productData.CreatedByGuid.String
 	}
 
-	if productData.UserName.Valid {
-		payload.CreatedBy.Name = productData.UserName.String
+	if productData.CreatedByName.Valid {
+		payload.CreatedBy.Name = productData.CreatedByName.String
 	}
 
 	if productData.ProductPictureUrl.Valid {
@@ -293,8 +352,8 @@ func ToPayloadProduct(productData sqlc.GetProductRow) (payload readProductPayloa
 
 	if productData.UpdatedBy.Valid {
 		payload.UpdatedBy = &readUserBackOfficePayload{
-			GUID: productData.UserIDUpdate.String,
-			Name: productData.UserNameUpdate.String,
+			GUID: productData.UpdatedByGuid.String,
+			Name: productData.UpdatedByName.String,
 		}
 	}
 
@@ -304,14 +363,18 @@ func ToPayloadProduct(productData sqlc.GetProductRow) (payload readProductPayloa
 		payload.Status = constants.StatusActive
 	}
 
+	if productData.ProductVariant != nil {
+		payload.ProductVariant = productData.ProductVariant
+	}
+
 	return
 }
 
-func ToPayloadListProduct(listProduct []sqlc.ListProductRow) (payload []*readProductPayload) {
-	payload = make([]*readProductPayload, len(listProduct))
+func ToPayloadListProduct(listProduct []sqlc.ListProductRow) (payload []*readProduct) {
+	payload = make([]*readProduct, len(listProduct))
 
 	for i := range listProduct {
-		payload[i] = new(readProductPayload)
+		payload[i] = new(readProduct)
 		data := ToPayloadProduct(sqlc.GetProductRow(listProduct[i]))
 		payload[i] = &data
 	}

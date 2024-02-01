@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 )
 
@@ -51,48 +52,76 @@ func (q *Queries) GetCountProductList(ctx context.Context, arg GetCountProductLi
 
 const getProduct = `-- name: GetProduct :one
 SELECT
-    p.guid, p.category_id, p.name, p.product_code, p.product_picture_url, p.description, p.created_at, p.created_by,
-    p.updated_at, p.updated_by, p.deleted_at, p.deleted_by,
-    ub_created.name AS user_name, ub_created.guid AS user_id,
-    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update,
-    pc.name AS category_name
+    p.id, p.guid, p.name, p.product_picture_url, p.description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by, p.product_code, p.category_id, p.product_sku, p.is_variant,
+    pc.name product_category_name,
+    ub_created.name AS created_by_name, ub_created.guid AS created_by_guid,
+    ub_updated.name AS updated_by_name, ub_updated.guid AS updated_by_guid,
+    json_agg(
+            json_build_object(
+                    'product_variant_id', pv.guid,
+                    'name', pv.name,
+                    'sku', pv.sku,
+                    'price', pp.price,
+                    'discount', pp.discount,
+                    'discount_type', pp.discount_type,
+                    'is_active', (CASE WHEN pv.is_active IS NOT NULL THEN pv.is_active WHEN p.deleted_at IS NOT NULL THEN 'inactive' ELSE 'inactive' END),
+                    'stock_id', (SELECT guid FROM stock WHERE product_id = p.guid AND (CASE WHEN pv.guid IS NOT NULL THEN product_variant_id = pv.guid ELSE product_variant_id IS NULL END)),
+                    'stock', (SELECT stock FROM stock WHERE product_id = p.guid AND (CASE WHEN pv.guid IS NOT NULL THEN product_variant_id = pv.guid ELSE product_variant_id IS NULL END))
+            )
+    ) AS product_variant
 FROM
     product p
+        LEFT JOIN
+    product_category pc
+    ON
+        p.category_id = pc.guid
+        LEFT JOIN
+    product_variant pv
+    ON
+        pv.product_id = p.guid
         LEFT JOIN user_backoffice ub_created ON ub_created.guid = p.created_by
         LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
-        LEFT JOIN product_category pc ON pc.guid = p.category_id
+        LEFT JOIN
+    product_price pp
+    ON
+        pp.product_id = p.guid
+            AND (CASE WHEN pp.product_variant_id IS NULL THEN pp.product_variant_id IS NULL ELSE pp.product_variant_id = pv.guid END)
 WHERE
     p.guid = $1
+group by p.id, p.guid, p.name, product_picture_url, description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by
 `
 
 type GetProductRow struct {
-	Guid              string         `json:"guid"`
-	CategoryID        string         `json:"category_id"`
-	Name              sql.NullString `json:"name"`
-	ProductCode       string         `json:"product_code"`
-	ProductPictureUrl sql.NullString `json:"product_picture_url"`
-	Description       string         `json:"description"`
-	CreatedAt         time.Time      `json:"created_at"`
-	CreatedBy         string         `json:"created_by"`
-	UpdatedAt         sql.NullTime   `json:"updated_at"`
-	UpdatedBy         sql.NullString `json:"updated_by"`
-	DeletedAt         sql.NullTime   `json:"deleted_at"`
-	DeletedBy         sql.NullString `json:"deleted_by"`
-	UserName          sql.NullString `json:"user_name"`
-	UserID            sql.NullString `json:"user_id"`
-	UserNameUpdate    sql.NullString `json:"user_name_update"`
-	UserIDUpdate      sql.NullString `json:"user_id_update"`
-	CategoryName      sql.NullString `json:"category_name"`
+	ID                  int64           `json:"id"`
+	Guid                string          `json:"guid"`
+	Name                sql.NullString  `json:"name"`
+	ProductPictureUrl   sql.NullString  `json:"product_picture_url"`
+	Description         string          `json:"description"`
+	CreatedAt           time.Time       `json:"created_at"`
+	CreatedBy           string          `json:"created_by"`
+	UpdatedAt           sql.NullTime    `json:"updated_at"`
+	UpdatedBy           sql.NullString  `json:"updated_by"`
+	DeletedAt           sql.NullTime    `json:"deleted_at"`
+	DeletedBy           sql.NullString  `json:"deleted_by"`
+	ProductCode         string          `json:"product_code"`
+	CategoryID          string          `json:"category_id"`
+	ProductSku          string          `json:"product_sku"`
+	IsVariant           bool            `json:"is_variant"`
+	ProductCategoryName sql.NullString  `json:"product_category_name"`
+	CreatedByName       sql.NullString  `json:"created_by_name"`
+	CreatedByGuid       sql.NullString  `json:"created_by_guid"`
+	UpdatedByName       sql.NullString  `json:"updated_by_name"`
+	UpdatedByGuid       sql.NullString  `json:"updated_by_guid"`
+	ProductVariant      json.RawMessage `json:"product_variant"`
 }
 
 func (q *Queries) GetProduct(ctx context.Context, guid string) (GetProductRow, error) {
 	row := q.db.QueryRowContext(ctx, getProduct, guid)
 	var i GetProductRow
 	err := row.Scan(
+		&i.ID,
 		&i.Guid,
-		&i.CategoryID,
 		&i.Name,
-		&i.ProductCode,
 		&i.ProductPictureUrl,
 		&i.Description,
 		&i.CreatedAt,
@@ -101,27 +130,34 @@ func (q *Queries) GetProduct(ctx context.Context, guid string) (GetProductRow, e
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
-		&i.UserName,
-		&i.UserID,
-		&i.UserNameUpdate,
-		&i.UserIDUpdate,
-		&i.CategoryName,
+		&i.ProductCode,
+		&i.CategoryID,
+		&i.ProductSku,
+		&i.IsVariant,
+		&i.ProductCategoryName,
+		&i.CreatedByName,
+		&i.CreatedByGuid,
+		&i.UpdatedByName,
+		&i.UpdatedByGuid,
+		&i.ProductVariant,
 	)
 	return i, err
 }
 
 const insertProduct = `-- name: InsertProduct :one
 INSERT INTO product 
-        (guid, category_id, name, product_code, product_picture_url, description, created_at, created_by)
+        (guid, category_id, name, product_sku, is_variant, product_code, product_picture_url, description, created_at, created_by)
     VALUES
-        ($1, $2, $3, $4, $5, $6, (now() at time zone 'UTC')::TIMESTAMP, $7)
-RETURNING product.id, product.guid, product.name, product.product_picture_url, product.description, product.created_at, product.created_by, product.updated_at, product.updated_by, product.deleted_at, product.deleted_by, product.product_code, product.category_id
+        ($1, $2, $3, $4, $5, $6, $7, $8, (now() at time zone 'UTC')::TIMESTAMP, $9)
+RETURNING product.id, product.guid, product.name, product.product_picture_url, product.description, product.created_at, product.created_by, product.updated_at, product.updated_by, product.deleted_at, product.deleted_by, product.product_code, product.category_id, product.product_sku, product.is_variant
 `
 
 type InsertProductParams struct {
 	Guid              string         `json:"guid"`
 	CategoryID        string         `json:"category_id"`
 	Name              sql.NullString `json:"name"`
+	ProductSku        string         `json:"product_sku"`
+	IsVariant         bool           `json:"is_variant"`
 	ProductCode       string         `json:"product_code"`
 	ProductPictureUrl sql.NullString `json:"product_picture_url"`
 	Description       string         `json:"description"`
@@ -133,6 +169,8 @@ func (q *Queries) InsertProduct(ctx context.Context, arg InsertProductParams) (P
 		arg.Guid,
 		arg.CategoryID,
 		arg.Name,
+		arg.ProductSku,
+		arg.IsVariant,
 		arg.ProductCode,
 		arg.ProductPictureUrl,
 		arg.Description,
@@ -153,72 +191,147 @@ func (q *Queries) InsertProduct(ctx context.Context, arg InsertProductParams) (P
 		&i.DeletedBy,
 		&i.ProductCode,
 		&i.CategoryID,
+		&i.ProductSku,
+		&i.IsVariant,
 	)
 	return i, err
 }
 
 const listProduct = `-- name: ListProduct :many
 SELECT
-    p.guid, p.category_id, p.name, p.product_code, p.product_picture_url, p.description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by,
-    ub_created.name AS user_name, ub_created.guid AS user_id,
-    ub_updated.name AS user_name_update, ub_updated.guid AS user_id_update,
-    pc.name AS category_name
+    p.id, p.guid, p.name, p.product_picture_url, p.description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by, p.product_code, p.category_id, p.product_sku, p.is_variant,
+    pc.name product_category_name,
+    ub_created.name AS created_by_name, ub_created.guid AS created_by_guid,
+    ub_updated.name AS updated_by_name, ub_updated.guid AS updated_by_guid,
+    json_agg(
+            json_build_object(
+                    'product_variant_id', pv.guid,
+                    'name', pv.name,
+                    'sku', pv.sku,
+                    'price', pp.price,
+                    'discount', pp.discount,
+                    'discount_type', pp.discount_type,
+                    'is_active', (CASE WHEN pv.is_active IS NOT NULL THEN pv.is_active WHEN p.deleted_at IS NOT NULL THEN FALSE ELSE FALSE END),
+                    'stock_id', (SELECT guid FROM stock WHERE product_id = p.guid AND (CASE WHEN pv.guid IS NOT NULL THEN product_variant_id = pv.guid ELSE product_variant_id IS NULL END)),
+                    'stock', (SELECT stock FROM stock WHERE product_id = p.guid AND (CASE WHEN pv.guid IS NOT NULL THEN product_variant_id = pv.guid ELSE product_variant_id IS NULL END))
+            )
+    ) AS product_variant
 FROM
     product p
-        LEFT JOIN product_category pc ON pc.guid = p.category_id
-        LEFT JOIN user_backoffice ub_created ON ub_created.guid = p.created_by
-        LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
+        LEFT JOIN
+    product_category pc
+    ON
+        p.category_id = pc.guid
+        LEFT JOIN
+    product_variant pv
+    ON
+        pv.product_id = p.guid
+    LEFT JOIN user_backoffice ub_created ON ub_created.guid = p.created_by
+    LEFT JOIN user_backoffice ub_updated ON ub_updated.guid = p.updated_by
+        LEFT JOIN
+    product_price pp
+    ON
+        pp.product_id = p.guid
+            AND (CASE WHEN pp.product_variant_id IS NULL THEN pp.product_variant_id IS NULL ELSE pp.product_variant_id = pv.guid END)
 WHERE
-    (CASE WHEN $1::bool THEN LOWER(p.name) LIKE LOWER($2) ELSE TRUE END)
-AND (CASE WHEN $3::bool THEN LOWER(p.product_code) LIKE LOWER($4) ELSE TRUE END)
-ORDER BY
-    (CASE WHEN $5 = 'id ASC' THEN p.guid END) ASC,
-    (CASE WHEN $5 = 'id DESC' THEN p.guid END) DESC,
-    (CASE WHEN $5 = 'name ASC' THEN p.name END) ASC,
-    (CASE WHEN $5 = 'name DESC' THEN p.name END) DESC,
-    (CASE WHEN $5 = 'created_at ASC' THEN p.created_at END) ASC,
-    (CASE WHEN $5 = 'created_at DESC' THEN p.created_at END) DESC,
-    p.created_at DESC
-    LIMIT $7
-OFFSET $6
+    (CASE WHEN $1::bool THEN p.is_variant = $2::bool ELSE TRUE END)
+  AND (CASE WHEN $3::bool THEN p.category_id = $4 ELSE TRUE END)
+  AND (CASE WHEN $5::bool THEN LOWER(p.name) LIKE LOWER($6) ELSE TRUE END)
+  AND (CASE WHEN $7::bool THEN LOWER(p.product_code) LIKE LOWER($8) ELSE TRUE END)
+  AND (CASE WHEN $9::bool THEN LOWER(p.description) LIKE LOWER($10) ELSE TRUE END)
+  AND (CASE WHEN $11::bool THEN LOWER(p.product_sku) LIKE LOWER($12) ELSE TRUE END)
+GROUP BY
+    p.guid,
+    p.product_picture_url,
+    p.is_variant,
+    p.category_id,
+    p.name,
+    p.description,
+    p.product_sku,
+    p.created_at,
+    p.created_by,
+    p.updated_at,
+    p.updated_by,
+    pc.name,
+    ub_created.name,
+    ub_created.guid,
+    ub_updated.name,
+    ub_updated.guid
+ORDER BY (CASE WHEN $13 = 'id ASC' THEN p.guid END) ASC,
+         (CASE WHEN $13 = 'id DESC' THEN p.guid END) DESC,
+         (CASE WHEN $13 = 'category_name ASC' THEN pc.name END) ASC,
+         (CASE WHEN $13 = 'category_name DESC' THEN pc.name END) DESC,
+         (CASE WHEN $13 = 'product_category_id ASC' THEN p.category_id END) ASC,
+         (CASE WHEN $13 = 'product_category_id DESC' THEN p.category_id END) DESC,
+         (CASE WHEN $13 = 'name ASC' THEN p.name END) ASC,
+         (CASE WHEN $13 = 'name DESC' THEN p.name END) DESC,
+         (CASE WHEN $13 = 'description ASC' THEN p.description END) ASC,
+         (CASE WHEN $13 = 'description DESC' THEN p.description END) DESC,
+         (CASE WHEN $13 = 'sku ASC' THEN p.product_sku END) ASC,
+         (CASE WHEN $13 = 'sku DESC' THEN p.product_sku END) DESC,
+        (CASE WHEN $13 = 'created_at ASC' THEN p.created_at END) ASC,
+         (CASE WHEN $13 = 'created_at DESC' THEN p.created_at END) DESC,
+         p.created_at DESC
+LIMIT $15
+    OFFSET $14
 `
 
 type ListProductParams struct {
-	SetName        bool        `json:"set_name"`
-	Name           string      `json:"name"`
-	SetProductCode bool        `json:"set_product_code"`
-	ProductCode    string      `json:"product_code"`
-	OrderParam     interface{} `json:"order_param"`
-	OffsetPage     int32       `json:"offset_page"`
-	LimitData      int32       `json:"limit_data"`
+	SetIsVariant         bool        `json:"set_is_variant"`
+	IsVariant            bool        `json:"is_variant"`
+	SetProductCategoryID bool        `json:"set_product_category_id"`
+	ProductCategoryID    string      `json:"product_category_id"`
+	SetName              bool        `json:"set_name"`
+	Name                 string      `json:"name"`
+	SetProductCode       bool        `json:"set_product_code"`
+	ProductCode          string      `json:"product_code"`
+	SetDescription       bool        `json:"set_description"`
+	Description          string      `json:"description"`
+	SetSku               bool        `json:"set_sku"`
+	Sku                  string      `json:"sku"`
+	OrderParam           interface{} `json:"order_param"`
+	OffsetPage           int32       `json:"offset_page"`
+	LimitData            int32       `json:"limit_data"`
 }
 
 type ListProductRow struct {
-	Guid              string         `json:"guid"`
-	CategoryID        string         `json:"category_id"`
-	Name              sql.NullString `json:"name"`
-	ProductCode       string         `json:"product_code"`
-	ProductPictureUrl sql.NullString `json:"product_picture_url"`
-	Description       string         `json:"description"`
-	CreatedAt         time.Time      `json:"created_at"`
-	CreatedBy         string         `json:"created_by"`
-	UpdatedAt         sql.NullTime   `json:"updated_at"`
-	UpdatedBy         sql.NullString `json:"updated_by"`
-	DeletedAt         sql.NullTime   `json:"deleted_at"`
-	DeletedBy         sql.NullString `json:"deleted_by"`
-	UserName          sql.NullString `json:"user_name"`
-	UserID            sql.NullString `json:"user_id"`
-	UserNameUpdate    sql.NullString `json:"user_name_update"`
-	UserIDUpdate      sql.NullString `json:"user_id_update"`
-	CategoryName      sql.NullString `json:"category_name"`
+	ID                  int64           `json:"id"`
+	Guid                string          `json:"guid"`
+	Name                sql.NullString  `json:"name"`
+	ProductPictureUrl   sql.NullString  `json:"product_picture_url"`
+	Description         string          `json:"description"`
+	CreatedAt           time.Time       `json:"created_at"`
+	CreatedBy           string          `json:"created_by"`
+	UpdatedAt           sql.NullTime    `json:"updated_at"`
+	UpdatedBy           sql.NullString  `json:"updated_by"`
+	DeletedAt           sql.NullTime    `json:"deleted_at"`
+	DeletedBy           sql.NullString  `json:"deleted_by"`
+	ProductCode         string          `json:"product_code"`
+	CategoryID          string          `json:"category_id"`
+	ProductSku          string          `json:"product_sku"`
+	IsVariant           bool            `json:"is_variant"`
+	ProductCategoryName sql.NullString  `json:"product_category_name"`
+	CreatedByName       sql.NullString  `json:"created_by_name"`
+	CreatedByGuid       sql.NullString  `json:"created_by_guid"`
+	UpdatedByName       sql.NullString  `json:"updated_by_name"`
+	UpdatedByGuid       sql.NullString  `json:"updated_by_guid"`
+	ProductVariant      json.RawMessage `json:"product_variant"`
 }
 
 func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]ListProductRow, error) {
 	rows, err := q.db.QueryContext(ctx, listProduct,
+		arg.SetIsVariant,
+		arg.IsVariant,
+		arg.SetProductCategoryID,
+		arg.ProductCategoryID,
 		arg.SetName,
 		arg.Name,
 		arg.SetProductCode,
 		arg.ProductCode,
+		arg.SetDescription,
+		arg.Description,
+		arg.SetSku,
+		arg.Sku,
 		arg.OrderParam,
 		arg.OffsetPage,
 		arg.LimitData,
@@ -231,10 +344,9 @@ func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]Lis
 	for rows.Next() {
 		var i ListProductRow
 		if err := rows.Scan(
+			&i.ID,
 			&i.Guid,
-			&i.CategoryID,
 			&i.Name,
-			&i.ProductCode,
 			&i.ProductPictureUrl,
 			&i.Description,
 			&i.CreatedAt,
@@ -243,11 +355,16 @@ func (q *Queries) ListProduct(ctx context.Context, arg ListProductParams) ([]Lis
 			&i.UpdatedBy,
 			&i.DeletedAt,
 			&i.DeletedBy,
-			&i.UserName,
-			&i.UserID,
-			&i.UserNameUpdate,
-			&i.UserIDUpdate,
-			&i.CategoryName,
+			&i.ProductCode,
+			&i.CategoryID,
+			&i.ProductSku,
+			&i.IsVariant,
+			&i.ProductCategoryName,
+			&i.CreatedByName,
+			&i.CreatedByGuid,
+			&i.UpdatedByName,
+			&i.UpdatedByGuid,
+			&i.ProductVariant,
 		); err != nil {
 			return nil, err
 		}
@@ -287,17 +404,21 @@ func (q *Queries) ReactiveProduct(ctx context.Context, arg ReactiveProductParams
 const updateProduct = `-- name: UpdateProduct :one
 UPDATE product 
 SET name = $1,
-    category_id = $2,
-    product_picture_url = $3,
-    description = $4,
-    updated_by = $5,
+    product_sku = $2,
+    is_variant = $3,
+    category_id = $4,
+    product_picture_url = $5,
+    description = $6,
+    updated_by = $7,
     updated_at = (now() at time zone 'UTC')::TIMESTAMP 
-WHERE guid = $6
-RETURNING product.id, product.guid, product.name, product.product_picture_url, product.description, product.created_at, product.created_by, product.updated_at, product.updated_by, product.deleted_at, product.deleted_by, product.product_code, product.category_id
+WHERE guid = $8
+RETURNING product.id, product.guid, product.name, product.product_picture_url, product.description, product.created_at, product.created_by, product.updated_at, product.updated_by, product.deleted_at, product.deleted_by, product.product_code, product.category_id, product.product_sku, product.is_variant
 `
 
 type UpdateProductParams struct {
 	Name              sql.NullString `json:"name"`
+	ProductSku        string         `json:"product_sku"`
+	IsVariant         bool           `json:"is_variant"`
 	CategoryID        string         `json:"category_id"`
 	ProductPictureUrl sql.NullString `json:"product_picture_url"`
 	Description       string         `json:"description"`
@@ -308,6 +429,8 @@ type UpdateProductParams struct {
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
 	row := q.db.QueryRowContext(ctx, updateProduct,
 		arg.Name,
+		arg.ProductSku,
+		arg.IsVariant,
 		arg.CategoryID,
 		arg.ProductPictureUrl,
 		arg.Description,
@@ -329,6 +452,8 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.DeletedBy,
 		&i.ProductCode,
 		&i.CategoryID,
+		&i.ProductSku,
+		&i.IsVariant,
 	)
 	return i, err
 }

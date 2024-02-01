@@ -6,8 +6,94 @@ package sqlc
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"time"
 )
+
+type DiscountTypeEnum string
+
+const (
+	DiscountTypeEnumNominal    DiscountTypeEnum = "nominal"
+	DiscountTypeEnumPercentage DiscountTypeEnum = "percentage"
+)
+
+func (e *DiscountTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DiscountTypeEnum(s)
+	case string:
+		*e = DiscountTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DiscountTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullDiscountTypeEnum struct {
+	DiscountTypeEnum DiscountTypeEnum `json:"discount_type_enum"`
+	Valid            bool             `json:"valid"` // Valid is true if DiscountTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDiscountTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.DiscountTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DiscountTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDiscountTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DiscountTypeEnum), nil
+}
+
+type StockTypeEnum string
+
+const (
+	StockTypeEnumIN  StockTypeEnum = "IN"
+	StockTypeEnumOUT StockTypeEnum = "OUT"
+)
+
+func (e *StockTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = StockTypeEnum(s)
+	case string:
+		*e = StockTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for StockTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullStockTypeEnum struct {
+	StockTypeEnum StockTypeEnum `json:"stock_type_enum"`
+	Valid         bool          `json:"valid"` // Valid is true if StockTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullStockTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.StockTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.StockTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullStockTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.StockTypeEnum), nil
+}
 
 type AppKey struct {
 	ID   int64  `json:"id"`
@@ -72,6 +158,8 @@ type Product struct {
 	DeletedBy         sql.NullString `json:"deleted_by"`
 	ProductCode       string         `json:"product_code"`
 	CategoryID        string         `json:"category_id"`
+	ProductSku        string         `json:"product_sku"`
+	IsVariant         bool           `json:"is_variant"`
 }
 
 type ProductCategory struct {
@@ -84,6 +172,40 @@ type ProductCategory struct {
 	UpdatedBy sql.NullString `json:"updated_by"`
 	DeletedAt sql.NullTime   `json:"deleted_at"`
 	DeletedBy sql.NullString `json:"deleted_by"`
+}
+
+type ProductPrice struct {
+	ID               int64                `json:"id"`
+	Guid             string               `json:"guid"`
+	ProductID        sql.NullString       `json:"product_id"`
+	ProductVariantID sql.NullString       `json:"product_variant_id"`
+	Price            int64                `json:"price"`
+	DiscountType     NullDiscountTypeEnum `json:"discount_type"`
+	Discount         sql.NullInt64        `json:"discount"`
+	IsActive         bool                 `json:"is_active"`
+	IsActiveBy       sql.NullString       `json:"is_active_by"`
+	CreatedAt        time.Time            `json:"created_at"`
+	CreatedBy        string               `json:"created_by"`
+	UpdatedAt        sql.NullTime         `json:"updated_at"`
+	UpdatedBy        sql.NullString       `json:"updated_by"`
+	DeletedAt        sql.NullTime         `json:"deleted_at"`
+	DeletedBy        sql.NullString       `json:"deleted_by"`
+}
+
+type ProductVariant struct {
+	ID         int64          `json:"id"`
+	Guid       string         `json:"guid"`
+	ProductID  string         `json:"product_id"`
+	Name       string         `json:"name"`
+	Sku        string         `json:"sku"`
+	IsActive   bool           `json:"is_active"`
+	IsActiveBy sql.NullString `json:"is_active_by"`
+	CreatedAt  time.Time      `json:"created_at"`
+	CreatedBy  string         `json:"created_by"`
+	UpdatedAt  sql.NullTime   `json:"updated_at"`
+	UpdatedBy  sql.NullString `json:"updated_by"`
+	DeletedAt  sql.NullTime   `json:"deleted_at"`
+	DeletedBy  sql.NullString `json:"deleted_by"`
 }
 
 type ProductsHistory struct {
@@ -102,6 +224,37 @@ type ProductsHistory struct {
 	UpdatedBy     sql.NullString `json:"updated_by"`
 	DeletedAt     sql.NullTime   `json:"deleted_at"`
 	DeletedBy     sql.NullString `json:"deleted_by"`
+}
+
+type Stock struct {
+	ID               int64          `json:"id"`
+	Guid             string         `json:"guid"`
+	ProductID        sql.NullString `json:"product_id"`
+	ProductVariantID sql.NullString `json:"product_variant_id"`
+	Stock            int64          `json:"stock"`
+	CreatedAt        time.Time      `json:"created_at"`
+	CreatedBy        string         `json:"created_by"`
+	UpdatedAt        sql.NullTime   `json:"updated_at"`
+	UpdatedBy        sql.NullString `json:"updated_by"`
+	DeletedAt        sql.NullTime   `json:"deleted_at"`
+	DeletedBy        sql.NullString `json:"deleted_by"`
+}
+
+type StockLog struct {
+	ID               int64             `json:"id"`
+	Guid             string            `json:"guid"`
+	StockID          sql.NullString    `json:"stock_id"`
+	ProductID        sql.NullString    `json:"product_id"`
+	ProductVariantID sql.NullString    `json:"product_variant_id"`
+	StockLog         int32             `json:"stock_log"`
+	StockType        NullStockTypeEnum `json:"stock_type"`
+	Note             sql.NullString    `json:"note"`
+	CreatedAt        time.Time         `json:"created_at"`
+	CreatedBy        string            `json:"created_by"`
+	UpdatedAt        sql.NullTime      `json:"updated_at"`
+	UpdatedBy        sql.NullString    `json:"updated_by"`
+	DeletedAt        sql.NullTime      `json:"deleted_at"`
+	DeletedBy        sql.NullString    `json:"deleted_by"`
 }
 
 type UserBackoffice struct {
