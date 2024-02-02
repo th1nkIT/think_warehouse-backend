@@ -23,6 +23,7 @@ import (
 
 	userHandheldApp "think_warehouse/src/user_handheld/application"
 
+	stockHandleApp "think_warehouse/src/product/stock/application"
 	warehouseHandledApp "think_warehouse/src/warehouse/application"
 )
 
@@ -60,6 +61,9 @@ func RunEchoHTTPService(ctx context.Context, s *httpservice.Service, cfg config.
 
 	// Warehouse
 	warehouseHandledApp.AddRouteWarehouse(s, cfg, e)
+
+	// Stock
+	stockHandleApp.AddRouteStock(s, cfg, e)
 
 	// set config routes for role access
 	httpservice.SetRouteConfig(ctx, s, cfg, e)
