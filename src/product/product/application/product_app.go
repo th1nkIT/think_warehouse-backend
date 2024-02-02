@@ -1,6 +1,7 @@
 package application
 
 import (
+	"encoding/json"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"math"
@@ -35,24 +36,79 @@ func AddRouteProduct(s *httpservice.Service, cfg config.KVStore, e *echo.Echo) {
 
 func createProduct(svc *service.ProductService) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		var request payload.RegisterProductPayload
+		var request interface{}
 		if err := ctx.Bind(&request); err != nil {
 			log.FromCtx(ctx.Request().Context()).Error(err, "failed to parse request")
 			return errors.WithStack(httpservice.ErrBadRequest)
 		}
 
-		// Validate request
-		if err := request.Validate(); err != nil {
-			return err
-		}
+		reqMap := request.(map[string]interface{})
 
-		data, userBackoffice, productCategory, err := svc.CreateProduct(ctx.Request().Context(), request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow)))
-		if err != nil {
-			return err
+		isVariant := reqMap["is_variant"].(bool)
+		if !isVariant {
+			return createProductWithoutVariant(svc, ctx, request)
+		} else {
+			return createProductWithVariant(svc, ctx, request)
 		}
-
-		return httpservice.ResponseData(ctx, payload.ToPayloadRegisterProduct(data, userBackoffice, productCategory), nil)
 	}
+}
+
+func createProductWithoutVariant(svc *service.ProductService, ctx echo.Context, rq interface{}) (err error) {
+	var request payload.CreateProductWithoutVariantRequest
+
+	byteData, err := json.Marshal(rq)
+	if err != nil {
+		log.FromCtx(ctx.Request().Context()).Error(err, "failed to parse request")
+		return errors.WithStack(httpservice.ErrBadRequest)
+	}
+
+	if err = json.Unmarshal(byteData, &request); err != nil {
+		log.FromCtx(ctx.Request().Context()).Error(err, "failed to parse request")
+		return errors.WithStack(httpservice.ErrBadRequest)
+	}
+
+	// Validate request
+	if err = request.Validate(); err != nil {
+		return
+	}
+
+	productParams, productPriceParams, stockLogParams, stockParams := request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow))
+
+	product, productCategory, productPrice, stockLog, stock, err := svc.CreateProductWithoutVariant(ctx.Request().Context(), productParams, productPriceParams, stockLogParams, stockParams)
+	if err != nil {
+		return
+	}
+
+	return httpservice.ResponseData(ctx, payload.ToResponsePayloadProductWithoutVariant(product, productCategory, productPrice, stockLog, stock), nil)
+}
+
+func createProductWithVariant(svc *service.ProductService, ctx echo.Context, rq interface{}) (err error) {
+	var request payload.CreateProductWithVariantRequest
+
+	byteData, err := json.Marshal(rq)
+	if err != nil {
+		log.FromCtx(ctx.Request().Context()).Error(err, "failed to parse request")
+		return errors.WithStack(httpservice.ErrBadRequest)
+	}
+
+	if err = json.Unmarshal(byteData, &request); err != nil {
+		log.FromCtx(ctx.Request().Context()).Error(err, "failed to parse request")
+		return errors.WithStack(httpservice.ErrBadRequest)
+	}
+
+	// Validate Request
+	if err := request.Validate(); err != nil {
+		return err
+	}
+
+	productParams, productVariantParams, productPriceParams, stockLogParams, stockParams := request.ToEntity(ctx.Get(constants.MddwUserBackoffice).(sqlc.GetUserBackofficeRow))
+
+	product, productCategory, productVariant, productPrice, stockLog, stock, err := svc.CreateProductWithVariant(ctx.Request().Context(), productParams, productVariantParams, productPriceParams, stockLogParams, stockParams)
+	if err != nil {
+		return err
+	}
+
+	return httpservice.ResponseData(ctx, payload.ToResponsePayloadProductWithVariant(product, productCategory, productVariant, productPrice, stockLog, stock), nil)
 }
 
 func updateProduct(svc *service.ProductService) echo.HandlerFunc {

@@ -29,6 +29,8 @@ var (
 	ErrProductCategoryIsInactive = errors.New("product category is inactive, active first")
 	ErrProductCategoryFailed     = errors.New("failed update product category")
 
+	ErrProductVariantDuplicate = errors.New("failed duplicate data product variant")
+
 	ErrRoleNotFound = errors.New("role not found")
 
 	ErrInvalidESBPromotionCode     = errors.New("invalid ESB promotion code")

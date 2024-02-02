@@ -39,7 +39,7 @@ type readRegisterProductCategoryPayload struct {
 	Name      string                    `json:"name"`
 	Status    string                    `json:"status"`
 	CreatedAt time.Time                 `json:"created_at"`
-	CreatedBy readUserBackOfficePayload `json:"created_by"`
+	CreatedBy readUserBackofficePayload `json:"created_by"`
 }
 
 type readUpdateProductCategoryPayload struct {
@@ -47,7 +47,7 @@ type readUpdateProductCategoryPayload struct {
 	Name      string                    `json:"name"`
 	Status    string                    `json:"status"`
 	UpdatedAt time.Time                 `json:"updated_at"`
-	UpdatedBy readUserBackOfficePayload `json:"updated_by"`
+	UpdatedBy readUserBackofficePayload `json:"updated_by"`
 }
 
 type readProductCategoryPayload struct {
@@ -55,11 +55,22 @@ type readProductCategoryPayload struct {
 	Name      string                     `json:"name"`
 	Status    string                     `json:"status"`
 	CreatedAt time.Time                  `json:"created_at"`
-	CreatedBy readUserBackOfficePayload  `json:"created_by"`
+	CreatedBy readUserBackofficePayload  `json:"created_by"`
 	UpdatedAt *time.Time                 `json:"updated_at"`
-	UpdatedBy *readUserBackOfficePayload `json:"updated_by"`
+	UpdatedBy *readUserBackofficePayload `json:"updated_by"`
 	DeletedAt *time.Time                 `json:"deleted_at"`
-	DeletedBy *readUserBackOfficePayload `json:"deleted_by"`
+	DeletedBy *readUserBackofficePayload `json:"deleted_by"`
+}
+
+type readProductCategory struct {
+	ID        int64      `json:"-"`
+	GUID      string     `json:"id"`
+	Name      string     `json:"name"`
+	IsActive  bool       `json:"is_active"`
+	CreatedAt time.Time  `json:"created_at"`
+	CreatedBy string     `json:"created_by"`
+	UpdatedAt *time.Time `json:"updated_at"`
+	UpdatedBy *string    `json:"updated_by"`
 }
 
 func (payload *RegisterProductCategoryPayload) Validate() (err error) {
@@ -154,7 +165,7 @@ func ToPayloadRegisterProductCategory(productCategoryData sqlc.ProductCategory, 
 		GUID:      productCategoryData.Guid,
 		Name:      productCategoryData.Name,
 		CreatedAt: productCategoryData.CreatedAt,
-		CreatedBy: readUserBackOfficePayload{
+		CreatedBy: readUserBackofficePayload{
 			GUID: userData.Guid,
 		},
 	}
@@ -177,7 +188,7 @@ func ToPayloadUpdateProductCategory(productCategoryData sqlc.ProductCategory, us
 		GUID:      productCategoryData.Guid,
 		Name:      productCategoryData.Name,
 		UpdatedAt: productCategoryData.UpdatedAt.Time,
-		UpdatedBy: readUserBackOfficePayload{
+		UpdatedBy: readUserBackofficePayload{
 			GUID: userData.Guid,
 		},
 	}
@@ -215,7 +226,7 @@ func ToPayloadProductCategory(productCategoryData sqlc.GetProductCategoryRow) (p
 	}
 
 	if productCategoryData.UpdatedBy.Valid {
-		payload.UpdatedBy = &readUserBackOfficePayload{
+		payload.UpdatedBy = &readUserBackofficePayload{
 			GUID: productCategoryData.UserIDUpdate.String,
 			Name: productCategoryData.UserNameUpdate.String,
 		}
@@ -232,7 +243,7 @@ func ToPayloadProductCategory(productCategoryData sqlc.GetProductCategoryRow) (p
 	}
 
 	if productCategoryData.DeletedBy.Valid {
-		payload.DeletedBy = &readUserBackOfficePayload{
+		payload.DeletedBy = &readUserBackofficePayload{
 			GUID: productCategoryData.UserIDDelete.String,
 			Name: productCategoryData.UserNameDelete.String,
 		}
