@@ -200,7 +200,7 @@ func (s *ProductService) CreateProductWithVariant(
 		if checkProductVariant, errCheckProductVariant := q.GetProductVariantByNameAndProductID(ctx, sqlc.GetProductVariantByNameAndProductIDParams{
 			Name:      productVariantParams[i].Name,
 			ProductID: productVariantParams[i].ProductID,
-		}); errCheckProductVariant != nil {
+		}); errCheckProductVariant == nil {
 			err = errors.Wrapf(err, "duplicate product variant: %s", checkProductVariant.Name)
 			log.FromCtx(ctx).Error(err, "failed product variant duplicate:")
 
