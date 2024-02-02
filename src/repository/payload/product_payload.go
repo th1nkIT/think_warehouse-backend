@@ -88,13 +88,42 @@ type ProductWithVariant struct {
 	ProductVariant    []readProductVariant `json:"product_variant"`
 }
 
-type UpdateProductPayload struct {
-	Name              string `json:"name" valid:"required"`
-	CategoryId        string `json:"category_id" valid:"required"`
-	ProductSKU        string `json:"product_sku"`
-	IsVariant         bool   `json:"is_variant"`
+type UpdateProductWithoutVariantRequest struct {
 	ProductPictureUrl string `json:"profile_picture_url"`
+	IsVariant         bool   `json:"is_variant"`
+	ProductCategoryID string `json:"product_category_id" valid:"required~product_category_id is required field"`
+	Name              string `json:"name" valid:"required~name is required field"`
 	Description       string `json:"description"`
+	Sku               string `json:"product_sku"`
+	Price             int64  `json:"price"`
+	DiscountType      string `json:"discount_type"`
+	Discount          int64  `json:"discount"`
+	Stock             int64  `json:"stock"`
+	StockType         sqlc.NullStockTypeEnum
+	StockGuID         string
+}
+
+type UpdateProductWithVariantRequest struct {
+	ImageURL          string                 `json:"profile_picture_url"`
+	IsVariant         bool                   `json:"is_variant"`
+	ProductCategoryID string                 `json:"product_category_id" valid:"required~product_category_id is required field"`
+	Name              string                 `json:"name" valid:"required~name is required field"`
+	Description       string                 `json:"description"`
+	ProductSKU        string                 `json:"product_sku"`
+	ProductVariant    []UpdateProductVariant `json:"product_variant"`
+}
+
+type UpdateProductVariant struct {
+	GUID         string `json:"id"`
+	Name         string `json:"name" valid:"required~variant_name is required field"`
+	Sku          string `json:"sku"`
+	Price        int64  `json:"price"`
+	DiscountType string `json:"discount_type"`
+	Discount     int64  `json:"discount"`
+	Stock        int64  `json:"stock"`
+	IsActive     bool   `json:"is_active" valid:"required~is_active is required field"`
+	StockType    sqlc.NullStockTypeEnum
+	StockGuID    string
 }
 
 type ListProductPayload struct {
@@ -175,7 +204,17 @@ func (payload *CreateProductWithVariantRequest) Validate() (err error) {
 	return
 }
 
-func (payload *UpdateProductPayload) Validate() (err error) {
+func (payload *UpdateProductWithoutVariantRequest) Validate() (err error) {
+	// Validate Payload
+	if _, err = govalidator.ValidateStruct(payload); err != nil {
+		err = errors.Wrapf(httpservice.ErrBadRequest, "bad request: %s", err.Error())
+		return
+	}
+
+	return
+}
+
+func (payload *UpdateProductWithVariantRequest) Validate() (err error) {
 	// Validate Payload
 	if _, err = govalidator.ValidateStruct(payload); err != nil {
 		err = errors.Wrapf(httpservice.ErrBadRequest, "bad request: %s", err.Error())
@@ -336,22 +375,120 @@ func (payload *CreateProductWithoutVariantRequest) ToEntity(userData sqlc.GetUse
 	return
 }
 
-func (payload *UpdateProductPayload) ToEntity(userData sqlc.GetUserBackofficeRow, guid string) (data sqlc.UpdateProductParams) {
-	data = sqlc.UpdateProductParams{
-		Guid: guid,
+func (payload *UpdateProductWithoutVariantRequest) ToEntity(userData sqlc.GetUserBackofficeRow, guid string) (
+	product sqlc.UpdateProductParams,
+	productPrice sqlc.UpdateProductPriceParams,
+	stockLog sqlc.InsertStockLogParams,
+	stock sqlc.UpdateStockParams,
+) {
+
+	product = sqlc.UpdateProductParams{
+		Guid:              guid,
+		ProductPictureUrl: sql.NullString{String: payload.ProductPictureUrl, Valid: len(payload.ProductPictureUrl) > 0},
+		IsVariant:         false,
+		CategoryID:        payload.ProductCategoryID,
 		Name: sql.NullString{
 			String: payload.Name,
 			Valid:  true,
 		},
-		ProductSku: payload.ProductSKU,
-		IsVariant:  payload.IsVariant,
-		CategoryID: payload.CategoryId,
-		ProductPictureUrl: sql.NullString{
-			String: payload.ProductPictureUrl,
+		Description: payload.Description,
+		ProductSku:  payload.Sku,
+		UpdatedBy:   sql.NullString{String: userData.Guid, Valid: true},
+	}
+
+	productPrice = sqlc.UpdateProductPriceParams{
+		Price:        payload.Price,
+		DiscountType: sqlc.DiscountTypeEnum(payload.DiscountType),
+		Discount:     sql.NullInt64{Int64: payload.Discount, Valid: payload.Discount > 0},
+		UpdatedBy:    sql.NullString{String: userData.Guid, Valid: true},
+		SetProductID: true,
+		ProductID:    sql.NullString{String: guid, Valid: true},
+	}
+
+	stockLog = sqlc.InsertStockLogParams{
+		Guid:      utility.GenerateGoogleUUID(),
+		ProductID: sql.NullString{String: guid, Valid: true},
+		StockLog:  int32(payload.Stock),
+		StockType: sqlc.NullStockTypeEnum{
+			StockTypeEnum: payload.StockType.StockTypeEnum,
+			Valid:         true,
+		},
+		CreatedBy: userData.Guid,
+	}
+
+	stock = sqlc.UpdateStockParams{
+		Guid:      payload.StockGuID,
+		Stock:     payload.Stock,
+		UpdatedBy: sql.NullString{String: userData.Guid, Valid: true},
+	}
+
+	return
+}
+
+func (payload *UpdateProductWithVariantRequest) ToEntity(userData sqlc.GetUserBackofficeRow, guid string) (
+	productParams sqlc.UpdateProductParams,
+	productVariantParams []sqlc.UpdateProductVariantParams,
+	productPriceParams []sqlc.UpdateProductPriceParams,
+	stockLogParams []sqlc.InsertStockLogParams,
+	stockParams []sqlc.UpdateStockParams,
+) {
+	productParams = sqlc.UpdateProductParams{
+		Guid:              guid,
+		ProductPictureUrl: sql.NullString{String: payload.ImageURL, Valid: len(payload.ImageURL) > 0},
+		IsVariant:         false,
+		CategoryID:        payload.ProductCategoryID,
+		Name: sql.NullString{
+			String: payload.Name,
 			Valid:  true,
 		},
 		Description: payload.Description,
+		ProductSku:  payload.ProductSKU,
 		UpdatedBy:   sql.NullString{String: userData.Guid, Valid: true},
+	}
+
+	for i := range payload.ProductVariant {
+		productVariant := payload.ProductVariant[i]
+		productVariantParam := sqlc.UpdateProductVariantParams{
+			Guid:      productVariant.GUID,
+			ProductID: guid,
+			Name:      productVariant.Name,
+			Sku:       productVariant.Sku,
+			IsActive:  productVariant.IsActive,
+			UpdatedBy: sql.NullString{String: userData.Guid, Valid: true},
+		}
+
+		productPriceParam := sqlc.UpdateProductPriceParams{
+			Price:               productVariant.Price,
+			DiscountType:        sqlc.DiscountTypeEnum(productVariant.DiscountType),
+			Discount:            sql.NullInt64{Int64: productVariant.Discount, Valid: productVariant.Discount > 0},
+			UpdatedBy:           sql.NullString{String: userData.Guid, Valid: true},
+			SetProductID:        true,
+			ProductID:           sql.NullString{String: guid, Valid: true},
+			SetProductVariantID: true,
+			ProductVariantID:    sql.NullString{String: productVariant.GUID, Valid: true},
+		}
+
+		stockLogParam := sqlc.InsertStockLogParams{
+			Guid:             utility.GenerateGoogleUUID(),
+			ProductVariantID: sql.NullString{String: productVariantParam.Guid, Valid: true},
+			StockLog:         int32(productVariant.Stock),
+			StockType: sqlc.NullStockTypeEnum{
+				StockTypeEnum: productVariant.StockType.StockTypeEnum,
+				Valid:         true,
+			},
+			CreatedBy: userData.Guid,
+		}
+
+		stockParam := sqlc.UpdateStockParams{
+			Guid:      productVariant.StockGuID,
+			Stock:     productVariant.Stock,
+			UpdatedBy: sql.NullString{String: userData.Guid, Valid: true},
+		}
+
+		productVariantParams = append(productVariantParams, productVariantParam)
+		productPriceParams = append(productPriceParams, productPriceParam)
+		stockLogParams = append(stockLogParams, stockLogParam)
+		stockParams = append(stockParams, stockParam)
 	}
 
 	return

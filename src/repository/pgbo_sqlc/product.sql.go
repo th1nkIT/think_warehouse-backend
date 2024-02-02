@@ -64,7 +64,7 @@ SELECT
                     'price', pp.price,
                     'discount', pp.discount,
                     'discount_type', pp.discount_type,
-                    'is_active', (CASE WHEN pv.is_active IS NOT NULL THEN pv.is_active WHEN p.deleted_at IS NOT NULL THEN 'inactive' ELSE 'inactive' END),
+                    'is_active', (CASE WHEN pv.is_active IS NOT NULL THEN pv.is_active WHEN p.deleted_at IS NOT NULL THEN FALSE ELSE FALSE END),
                     'stock_id', (SELECT guid FROM stock WHERE product_id = p.guid AND (CASE WHEN pv.guid IS NOT NULL THEN product_variant_id = pv.guid ELSE product_variant_id IS NULL END)),
                     'stock', (SELECT stock FROM stock WHERE product_id = p.guid AND (CASE WHEN pv.guid IS NOT NULL THEN product_variant_id = pv.guid ELSE product_variant_id IS NULL END))
             )
@@ -88,7 +88,12 @@ FROM
             AND (CASE WHEN pp.product_variant_id IS NULL THEN pp.product_variant_id IS NULL ELSE pp.product_variant_id = pv.guid END)
 WHERE
     p.guid = $1
-group by p.id, p.guid, p.name, product_picture_url, description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by
+group by p.id, p.guid, p.name, product_picture_url, description, p.created_at, p.created_by, p.updated_at, p.updated_by, p.deleted_at, p.deleted_by,
+         pc.name,
+         ub_created.name,
+         ub_created.guid,
+         ub_updated.name,
+         ub_updated.guid
 `
 
 type GetProductRow struct {
